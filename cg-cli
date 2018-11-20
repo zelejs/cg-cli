@@ -1,9 +1,17 @@
 #!/usr/bin/env bash
 usage() {
-  echo "Usage: cg-cli gen"
+  echo "Usage: cg-cli crud one      <master>"
+  echo "       cg-cli crud onemany  <master> <slave>"
+  echo "       cg-cli crud manymany <master> <peer> <relation>"
+  echo "       cg-cli crud group    <group>  [by]"
   echo "       cg-cli show tables"
   echo "       cg-cli show create table <table-name>"
-  echo "       cg-cli init ## set initialize=true"
+  echo "       cg-cli gen  <table> [...]"
+  echo "--"
+  echo "   gen  ## gen with initialize=true"
+}
+usage_gen() {
+   echo "Usage: cg-cli gen <table> ..."
 }
 
 
@@ -13,21 +21,31 @@ if [ ! $cmd ];then
    exit
 fi
 
-if [ "$cmd"x == "show"x -a "$2"x == "tables"x ];then
-   cmd=showtables
-fi
-if [ "$cmd"x == "show"x -a "$2"x == "create"x -a "$3"x == "table"x ];then
-   if [ ! $4 ];then
-      usage
-      exit
-   fi 
-   cmd=showcreatetable
+if [ "$cmd"x == "show"x ];then
+   if [ "$2"x == "tables"x ];then
+      cmd=showtables
+   elif [ "$2"x == "create"x -a "$3"x == "table"x ];then
+      if [ ! $4 ];then
+         usage
+         exit
+      fi 
+      cmd=showcreatetable
+   fi
 fi
 
+if [ "$cmd"x == "gen"x ];then
+   if [ ! $2 ];then
+      usage_gen
+      exit
+   fi
+   shift
+fi
 
 dir=$(dirname $0)
 
-pom=$dir/code-generator-pom.xml
+POM=code-generator-pom.xml
+pom=$dir/$POM
+pom_gen=$dir/gen/$POM
 
 ## get connection string
 url=$(grep "<url>" $pom)
@@ -37,11 +55,7 @@ url=${url//amp;/}
 #echo $url
 
 gen() {
-   mvn -Dinit=false com.jfeat:sb-code-generator:1.2.3:generate -f $dir/code-generator-pom.xml
-}
-
-init() {
-   mvn -Dinit=true com.jfeat:sb-code-generator:1.2.3:generate -f $dir/code-generator-pom.xml
+   mvn -Dinit=true com.jfeat:sb-code-generator:1.2.3:generate -f $pom_gen
 }
 
 getdatabase(){
@@ -81,7 +95,7 @@ test_connection() {
    fi
 }
 
-test_connection
+#test_connection
 
 if [ $? -eq 0 ];then
   echo '' > /dev/null
@@ -94,8 +108,9 @@ if [ "$cmd"x == "showtables"x ];then
 elif [ "$cmd"x == "showcreatetable"x ];then
    showcreatetable $4
 elif [ "$cmd"x == "gen"x ];then
+   # config tables
+   $dir/conf-cli table add $@
+   # gen persistance
    gen
-elif [ "$cmd"x == "init"x ];then
-   init
 fi
 

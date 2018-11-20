@@ -1,0 +1,145 @@
+#!/usr/bin/env perl
+## change the port from 8080 to custom
+use lib qw(local);
+use XML::Smart;
+use Data::Dumper;
+
+my $dir = $0;
+$dir =~ s/\/[\w\.-]+$//;
+my $POM = "code-generator-pom.xml";
+my $pom = "$dir/$POM";
+my $pom_gen = "$dir/gen/$POM";
+
+## get args
+my $domain = shift @ARGV;
+my $cmd = shift @ARGV;
+
+sub usage {
+    print "Usage: \n";
+    print "   conf-cli table reset\n";
+    print "   conf-cli table add <table>  [...]\n";
+    print "   conf-cli crud  add one      <master>\n";
+    print "   conf-cli crud  add onemany  <master> <slave>\n";
+    print "   conf-cli crud  add manymany <master> <peer>  <relation>\n";
+    print "   conf-cli crud  add group    <group>  [by]\n";
+}
+
+if( !$cmd ){
+   usage();
+   exit(0);
+}
+if($domain =~ /^table$/){
+   ## ok
+   if($cmd =~ /^add$/){
+      my $args = @ARGV;
+      if($args==0){
+         print "Usage: conf-cli table add <table> ...\n";
+         exit(0);
+      }
+   }
+}
+elsif ($domain =~ /^crud$/){
+    ## ok
+    if($cmd =~ /^add$/){
+       ## ok
+       my $op = $ARGV[0];
+       if($op =~ /^one$/){
+          ## ok
+          if (@ARGV==1){
+             print "Usage: conf-cli crud add one <table>\n";
+             exit(0);
+          }
+       }else{
+          print "Usage: conf-cli crud add one <table>\n";
+          exit(0);
+       }
+    } 
+    elsif($cmd =~ /^onemany$/){
+       ## ok
+    }
+    elsif($cmd =~ /^manymany$/){
+       ## ok
+    }else{
+       usage();
+       exit();
+    }
+   
+}else{
+   usage();
+   exit(0);
+}
+
+
+my $XML = XML::Smart->new($pom);
+#$XML = $XML->cut_root ;
+#my $connector = $XML->{Service}[0]{Connector}("protocol", "eq", "HTTP/1.1");
+#my $port = $connector->{port};
+
+sub add_table {
+   my($tabs_ref) = @_;
+   my @tabs = @{$tabs_ref};
+
+   if (@tabs == 1){
+       push(@tabs,$tabs[0]);
+   }
+   
+   my $tables_ref =  $XML->{project}{build}{plugins}{plugin}{configuration}{tables};
+   #foreach my $tab (@tabs){
+   #    push(@{$tables_ref}, $tab);
+   #}
+   $tables_ref->{table} = \@tabs;
+}
+
+sub reset_table{
+    my $tables_ref =  $XML->{project}{build}{plugins}{plugin}{configuration};
+    my @empty=();
+    $tables_ref->{tables} = \@empty;
+}
+
+sub crud_add_one {
+   my($crud_tab) = @_;
+   
+   my $cruds_ref =  $XML->{project}{build}{plugins}{plugin}{configuration}{cruds};
+   #foreach my $tab (@tabs){
+   #    push(@{$tables_ref}, $tab);
+   #}
+   $cruds_ref->{crud} = crud_tab;
+}
+
+
+## 
+if($domain =~ /^table$/){
+    if($cmd =~ /add/){
+       my @tabs = @ARGV;
+       add_table(\@tabs);
+    }elsif ($cmd =~ /reset/){
+       reset_table();
+    }
+    
+}elsif($domain =~ /^crud$/){
+    if($cmd =~ /one/){
+        my $op = shift @ARGV;
+        my $tab = shift @ARGV;
+        if($op =~ /^add$/){
+           crud_add_one($tab);
+        }
+       
+    }elsif ($cmd =~ /onemany/){
+       
+    }elsif ($cmd =~ /manymany/){
+       
+    }
+    
+}
+
+#print Dumper($XML->data);
+
+## get or chng server port
+##$connector->{port} = $server_port;
+
+## dump
+#$XML->save($pom_gen);
+print Dumper($XML->data);
+
+
+

@@ -1,0 +1,29 @@
+<cruds>
+    <!--onemany-->
+    <crud>
+        <mask>master</mask>
+        <master>master_table_name</master>
+	    <masterId>master_id_field_in_slave_table</masterId>
+        <slaves>
+            <slave>slave_table_name</slave>
+         </slaves>
+        <children>
+           <child>child_table_name</child>
+        </children>
+    <crud>
+    <!--manymany-->
+    <crud>
+        <mask>peer</mask>
+        <master>master_table_name</master>
+        <masterPeer>master_peer_table_name</masterPeer>
+        <relation>relation_table_name</relation>
+    </crud>
+    <!--group-->
+    <cruds>
+        <crud>
+            <mask>group</mask>
+            <group>group_table_name</group>
+            <groupBy>groupBy_table_name</groupBy>
+        </crud>
+    </cruds>
+</cruds>
