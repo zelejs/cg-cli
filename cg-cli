@@ -1,0 +1,101 @@
+#!/usr/bin/env bash
+usage() {
+  echo "Usage: cg-cli gen"
+  echo "       cg-cli show tables"
+  echo "       cg-cli show create table <table-name>"
+  echo "       cg-cli init ## set initialize=true"
+}
+
+
+cmd=$1
+if [ ! $cmd ];then
+   usage
+   exit
+fi
+
+if [ "$cmd"x == "show"x -a "$2"x == "tables"x ];then
+   cmd=showtables
+fi
+if [ "$cmd"x == "show"x -a "$2"x == "create"x -a "$3"x == "table"x ];then
+   if [ ! $4 ];then
+      usage
+      exit
+   fi 
+   cmd=showcreatetable
+fi
+
+
+dir=$(dirname $0)
+
+pom=$dir/code-generator-pom.xml
+
+## get connection string
+url=$(grep "<url>" $pom)
+url=${url%</url>}
+url=${url#*<url>}
+url=${url//amp;/}
+#echo $url
+
+gen() {
+   mvn -Dinit=false com.jfeat:sb-code-generator:1.2.3:generate -f $dir/code-generator-pom.xml
+}
+
+init() {
+   mvn -Dinit=true com.jfeat:sb-code-generator:1.2.3:generate -f $dir/code-generator-pom.xml
+}
+
+getdatabase(){
+   #cut after ?
+   db=$url
+   db=${db##*/}
+   db=${db%%[\?]*}
+   echo $db
+}
+
+showtables() {
+    db=$(getdatabase)
+    sql="select TABLE_NAME from INFORMATION_SCHEMA.TABLES where TABLE_SCHEMA='$db' and TABLE_NAME <> 'schema_version'"
+    for t in $($dir/mysql-test/bin/mysql-test "$url" "$sql");do
+        echo $t
+    done
+}
+
+#IFS=$'\n'
+showcreatetable() {
+    table=$1
+    sql="show create table $table"
+    result=$($dir/mysql-test/bin/mysql-test "$url" "$sql")
+    echo $result
+    #for l in $result;do
+    #   echo $l
+    #done
+}
+
+## test mysql
+test_connection() {
+   mysql_test=$($dir/mysql-test/bin/mysql-test $url "select now()")
+   if [ "$mysql_test" ];then
+      return 0
+   else
+      return 1
+   fi
+}
+
+test_connection
+
+if [ $? -eq 0 ];then
+  echo '' > /dev/null
+else
+  exit
+fi
+
+if [ "$cmd"x == "showtables"x ];then
+   showtables
+elif [ "$cmd"x == "showcreatetable"x ];then
+   showcreatetable $4
+elif [ "$cmd"x == "gen"x ];then
+   gen
+elif [ "$cmd"x == "init"x ];then
+   init
+fi
+

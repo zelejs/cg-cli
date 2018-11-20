@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.jfeat</groupId>
+    <artifactId>code-generator</artifactId>
+    <version>1.0.0</version>
+
+    <properties>
+        <moduleName>test</moduleName>
+        <url>jdbc:mysql://ok.zele.pro/test?user=root&amp;password=root&amp;characterEncoding=utf8</url>
+        <init>false</init>
+    </properties>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>com.jfeat</groupId>
+                <artifactId>sb-code-generator</artifactId>
+                <version>1.2.3</version>
+                <configuration>
+                    <moduleName>${moduleName}</moduleName>
+                    <dbUrl>${url}</dbUrl>
+                    <initialize>${init}</initialize>
+                    <tables>
+                        <table>peerTable</table>
+                        <table>masterTable</table>
+                    </tables>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>
