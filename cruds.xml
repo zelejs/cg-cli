@@ -10,7 +10,7 @@
         <children>
            <child>child_table_name</child>
         </children>
-    <crud>
+    </crud>
     <!--manymany-->
     <crud>
         <mask>peer</mask>

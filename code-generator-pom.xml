@@ -23,6 +23,7 @@
                     <dbUrl>${url}</dbUrl>
                     <initialize>${init}</initialize>
                     <tables>
+                         <table>one</table>
                     </tables>
                     <cruds></cruds>
                 </configuration>

@@ -7,19 +7,34 @@ use Data::Dumper;
 my $dir = $0;
 $dir =~ s/\/[\w\.-]+$//;
 my $POM = "code-generator-pom.xml";
-my $pom = "$dir/$POM";
-my $pom_gen = "$dir/gen/$POM";
+my $pom = "$dir/gen/$POM";
+if( ! (-e $pom) ){
+   print `cp $dir/$POM $pom`;
+}
 
 ## get args
 my $domain = shift @ARGV;
 my $cmd = shift @ARGV;
 
+my $dump=undef;
+my $save=undef;
+foreach(@ARGV){
+  if(/--dump/){
+    $dump=1
+  }
+  if(/--save/){
+    $save=1
+  }
+}
+
 sub usage {
     print "Usage: \n";
-    print "   conf-cli table reset\n";
+    print "   conf-cli table list [--dump] [--save]\n";
     print "   conf-cli table add <table>  [...]\n";
+    print "   conf-cli table reset\n";
+    print "   conf-cli crud  list\n";
     print "   conf-cli crud  add one      <master>\n";
-    print "   conf-cli crud  add onemany  <master> <slave>\n";
+    print "   conf-cli crud  add onemany  <master> <slave> [...]\n";
     print "   conf-cli crud  add manymany <master> <peer>  <relation>\n";
     print "   conf-cli crud  add group    <group>  [by]\n";
 }
@@ -34,13 +49,20 @@ if($domain =~ /^table$/){
       my $args = @ARGV;
       if($args==0){
          print "Usage: conf-cli table add <table> ...\n";
-         exit(0);
+         exit;
       }
+   }elsif($cmd =~ /^list$/){
+   }elsif($cmd =~ /^reset$/){
+   }else{
+      usage;
+      exit;
    }
 }
 elsif ($domain =~ /^crud$/){
     ## ok
-    if($cmd =~ /^add$/){
+    if($cmd =~ /^list$/){
+       ## ok
+    }elsif($cmd =~ /^add$/){
        ## ok
        my $op = $ARGV[0];
        if($op =~ /^one$/){
@@ -75,71 +97,174 @@ my $XML = XML::Smart->new($pom);
 #my $connector = $XML->{Service}[0]{Connector}("protocol", "eq", "HTTP/1.1");
 #my $port = $connector->{port};
 
-sub add_table {
-   my($tabs_ref) = @_;
-   my @tabs = @{$tabs_ref};
 
-   if (@tabs == 1){
-       push(@tabs,$tabs[0]);
-   }
-   
-   my $tables_ref =  $XML->{project}{build}{plugins}{plugin}{configuration}{tables};
-   #foreach my $tab (@tabs){
-   #    push(@{$tables_ref}, $tab);
-   #}
-   $tables_ref->{table} = \@tabs;
+## 
+if($domain =~ /^table$/){
+    if($cmd =~ /list/){
+        &table_list(undef)
+       
+    }elsif ($cmd =~ /add/){
+       my @tabs = @ARGV;
+       &table_add(\@tabs);
+       
+    }elsif ($cmd =~ /reset/){
+       &table_reset();
+    }
+    
+}elsif($domain =~ /^crud$/){
+
+    if($cmd =~ /^list$/){
+        &crud_list;
+        
+    } elsif($cmd =~ /^add$/){
+        if($cmd =~ /one/){
+            my $op = shift @ARGV;
+            my $tab = shift @ARGV;
+            if($op =~ /^add$/){
+               crud_add_one($tab);
+            }
+           
+        }elsif ($cmd =~ /onemany/){
+           
+        }elsif ($cmd =~ /manymany/){
+           
+        }
+    }
 }
 
-sub reset_table{
+
+if($dump){
+## get or chng server port
+##$connector->{port} = $server_port;
+print "\n##############################################\n";
+print Dumper($XML->data);
+print "\n##############################################\n";
+}
+if($save){
+   $XML->save($pom);
+}
+
+########################################
+## Table Domain
+########################################
+sub table_list {
+    my ($line) = @_;
+    $line = 'line';
+    
+    my @tables =  $XML->{project}{build}{plugins}{plugin}{configuration}{tables}->nodes;
+    my $TABLES = &create_table(\@tables);
+    my $data = Dumper($TABLES->data);
+    my @lines = split(/\n/,$data);
+    foreach(@lines){
+       if(/table/){
+          print;
+          print "\n";
+       }
+    }
+    
+    return;
+    
+     #my $tables_ref = $XML->{project}{build}{plugins}{plugin}{configuration}{tables};
+     #my $hash = $tables_ref->tree_ok();
+     #my $tab_hash = $hash->{project}{build}{plugins}{plugin}{configuration}{tables};
+        
+    if($line){
+        my @tables =  $XML->{project}{build}{plugins}{plugin}{configuration}{tables}->nodes;
+        foreach (@tables){
+            print;
+            print "\n";
+        }
+    }
+}
+
+sub table_add {
+   my ($tabs_ref) = @_;
+   my @tabs = @{$tabs_ref};
+ 
+   my $tables_ref =  $XML->{project}{build}{plugins}{plugin}{configuration}{tables};
+   
+   my @tables =  $XML->{project}{build}{plugins}{plugin}{configuration}{tables}->nodes;
+
+   if( (@tables + @tabs) > 1){
+       foreach(@tabs){
+          push(@{$tables_ref->{table}}, $_);
+          #$tables_ref->{table}->content(0, $_);
+       }
+   }else{
+       $tables_ref->{table}->content(0, $tabs[0]);
+   }
+}
+
+sub table_reset {
     my $tables_ref =  $XML->{project}{build}{plugins}{plugin}{configuration};
     my @empty=();
     $tables_ref->{tables} = \@empty;
+}
+
+
+
+########################################
+## CRUD Domain 
+########################################
+sub crud_list {
+   my($crud_tab) = @_;
+   
+   my $cruds_ref =  $XML->{project}{build}{plugins}{plugin}{configuration}{cruds}{crud};
+   my @cruds = @{$cruds_ref};
+   
+   foreach(@cruds){
+       print $_->tree->{mask};
+       print "\n";
+   }
+   
+  # print Dumper($cruds_ref->tree_ok);
 }
 
 sub crud_add_one {
    my($crud_tab) = @_;
    
    my $cruds_ref =  $XML->{project}{build}{plugins}{plugin}{configuration}{cruds};
-   #foreach my $tab (@tabs){
-   #    push(@{$tables_ref}, $tab);
-   #}
+   
+   my $crud = &create_crud_one($crud_tab);
+   
    $cruds_ref->{crud} = crud_tab;
 }
 
+########################################
+## TABLE Builder 
+########################################
+sub create_table {
+    my ($tabs_ref) = @_;
+    my @tabs = @{$tabs_ref};
+    
+    my $TABLES = XML::Smart->new();
+        my $one = $TABLES->{tables};
 
-## 
-if($domain =~ /^table$/){
-    if($cmd =~ /add/){
-       my @tabs = @ARGV;
-       add_table(\@tabs);
-    }elsif ($cmd =~ /reset/){
-       reset_table();
-    }
-    
-}elsif($domain =~ /^crud$/){
-    if($cmd =~ /one/){
-        my $op = shift @ARGV;
-        my $tab = shift @ARGV;
-        if($op =~ /^add$/){
-           crud_add_one($tab);
-        }
-       
-    }elsif ($cmd =~ /onemany/){
-       
-    }elsif ($cmd =~ /manymany/){
-       
-    }
-    
+       if(@tabs > 1){
+           foreach(@tabs){
+              push(@{$one->{table}}, $_);
+           }
+       }else{
+           $one->{table}->content(0, $tabs[0]);
+       }
+
+    return $TABLES;
 }
 
-#print Dumper($XML->data);
+########################################
+## CRUD Builder 
+########################################
+sub create_crud_one {
+    my ($master) = @_;
+    
+    my $CRUD = XML::Smart->new();
+        my $one = $CRUD->{crud};
+        $one->{mask}->content(0, 'master');
+        $one->{master}->content(0, $master);
+        
+    return $CRUD;
+}
 
-## get or chng server port
-##$connector->{port} = $server_port;
-
-## dump
-#$XML->save($pom_gen);
-print Dumper($XML->data);
 
 
 
