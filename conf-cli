@@ -9,8 +9,12 @@ $dir =~ s/\/[\w\.-]+$//;
 my $POM = "code-generator-pom.xml";
 my $pom = "$dir/gen/$POM";
 if( ! (-e $pom) ){
-   print `cp $dir/$POM $pom`;
+    if(!(-d "$dir/gen")){
+         print `mkdir $dir/gen`;
+    }
+    print `cp $dir/$POM $pom`;
 }
+
 
 ## get args
 my $domain = shift @ARGV;
@@ -29,9 +33,10 @@ foreach(@ARGV){
 
 sub usage {
     print "Usage: \n";
+    print "   conf-cli table reset\n";
     print "   conf-cli table list [--dump] [--save]\n";
     print "   conf-cli table add <table>  [...]\n";
-    print "   conf-cli table reset\n";
+    print "   conf-cli crud  reset\n";
     print "   conf-cli crud  list\n";
     print "   conf-cli crud  add one      <master>\n";
     print "   conf-cli crud  add onemany  <master> <slave> [...]\n";
@@ -48,7 +53,7 @@ if($domain =~ /^table$/){
    if($cmd =~ /^add$/){
       my $args = @ARGV;
       if($args==0){
-         print "Usage: conf-cli table add <table> ...\n";
+         usage;
          exit;
       }
    }elsif($cmd =~ /^list$/){
@@ -61,6 +66,8 @@ if($domain =~ /^table$/){
 elsif ($domain =~ /^crud$/){
     ## ok
     if($cmd =~ /^list$/){
+       ## ok
+    }elsif($cmd =~ /^reset$/){
        ## ok
     }elsif($cmd =~ /^add$/){
        ## ok
@@ -101,14 +108,16 @@ my $XML = XML::Smart->new($pom);
 ## 
 if($domain =~ /^table$/){
     if($cmd =~ /list/){
-        &table_list(undef)
+        &table_list;
        
     }elsif ($cmd =~ /add/){
        my @tabs = @ARGV;
        &table_add(\@tabs);
+       &table_list;
        
     }elsif ($cmd =~ /reset/){
        &table_reset();
+       &table_list;
     }
     
 }elsif($domain =~ /^crud$/){
@@ -116,17 +125,33 @@ if($domain =~ /^table$/){
     if($cmd =~ /^list$/){
         &crud_list;
         
-    } elsif($cmd =~ /^add$/){
-        if($cmd =~ /one/){
-            my $op = shift @ARGV;
-            my $tab = shift @ARGV;
-            if($op =~ /^add$/){
-               crud_add_one($tab);
-            }
+    }elsif($cmd =~ /^reset$/){
+        &crud_reset;
+        &crud_list;
+
+    }elsif($cmd =~ /^add$/){
+
+        my $crud_mask = shift @ARGV;
+
+        if($crud_mask =~ /one/){
+            my $master = shift @ARGV;
+            crud_add_one($master);
+            &crud_list;
            
-        }elsif ($cmd =~ /onemany/){
+        }elsif ($crud_mask =~ /onemany/){
+            my $master = shift @ARGV;
+            my @slaves = @ARGV;
+
+            crud_add_onemany($master, \@slaves);
+            &crud_list;
            
-        }elsif ($cmd =~ /manymany/){
+        }elsif ($crud_mask =~ /manymany/){
+            my $master = shift @ARGV;
+            my $peer = shift @ARGV;
+            my $relation = shift @ARGV;
+
+            crud_add_manymany($master, $peer, $relation);
+            &crud_list;
            
         }
     }
@@ -148,51 +173,54 @@ if($save){
 ## Table Domain
 ########################################
 sub table_list {
-    my ($line) = @_;
-    $line = 'line';
+    # my @tables =  $XML->{project}{build}{plugins}{plugin}{configuration}{tables}->nodes;
+    # my $TABLES = &create_table(\@tables);
+    # my $data = Dumper($TABLES->data);
+    # my @lines = split(/\n/,$data);
+    # foreach(@lines){
+    #    if(/table/){
+    #       print;
+    #       print "\n";
+    #    }
+    # }
+
+    # return;
     
-    my @tables =  $XML->{project}{build}{plugins}{plugin}{configuration}{tables}->nodes;
-    my $TABLES = &create_table(\@tables);
-    my $data = Dumper($TABLES->data);
+    my $tables_node =  $XML->{project}{build}{plugins}{plugin}{configuration}{tables};
+    my @tables = @{$tables_node->{table}};
+
+    my $TABLES_NEW = XML::Smart->new();
+    $TABLES_NEW = $TABLES_NEW->{tables};
+
+    foreach(@tables){
+       push(@{$TABLES_NEW->{table}}, $_);
+    }
+
+    ## dump data
+    my $data = Dumper($TABLES_NEW->data);
+
     my @lines = split(/\n/,$data);
     foreach(@lines){
-       if(/table/){
-          print;
-          print "\n";
-       }
-    }
-    
-    return;
-    
-     #my $tables_ref = $XML->{project}{build}{plugins}{plugin}{configuration}{tables};
-     #my $hash = $tables_ref->tree_ok();
-     #my $tab_hash = $hash->{project}{build}{plugins}{plugin}{configuration}{tables};
-        
-    if($line){
-        my @tables =  $XML->{project}{build}{plugins}{plugin}{configuration}{tables}->nodes;
-        foreach (@tables){
-            print;
-            print "\n";
+        if(/meta/ || /xml/ || /[\$;]/){
+            next;
         }
+        print;
+        print "\n";
     }
 }
 
 sub table_add {
-   my ($tabs_ref) = @_;
-   my @tabs = @{$tabs_ref};
+    my ($tabs_ref) = @_;
+    my @tabs = @{$tabs_ref};
  
-   my $tables_ref =  $XML->{project}{build}{plugins}{plugin}{configuration}{tables};
-   
-   my @tables =  $XML->{project}{build}{plugins}{plugin}{configuration}{tables}->nodes;
+    my $tables_node =  $XML->{project}{build}{plugins}{plugin}{configuration}{tables};
 
-   if( (@tables + @tabs) > 1){
-       foreach(@tabs){
-          push(@{$tables_ref->{table}}, $_);
-          #$tables_ref->{table}->content(0, $_);
-       }
-   }else{
-       $tables_ref->{table}->content(0, $tabs[0]);
-   }
+    foreach(@tabs){
+;        my $table_new = XML::Smart->new();
+        $table_new->{table}->content(0, $_);
+
+        push(@{$tables_node->{table}}, $table_new->nodes);
+    }
 }
 
 sub table_reset {
@@ -207,27 +235,58 @@ sub table_reset {
 ## CRUD Domain 
 ########################################
 sub crud_list {
-   my($crud_tab) = @_;
-   
-   my $cruds_ref =  $XML->{project}{build}{plugins}{plugin}{configuration}{cruds}{crud};
-   my @cruds = @{$cruds_ref};
-   
+
+   my $cruds_node =  $XML->{project}{build}{plugins}{plugin}{configuration}{cruds};
+   my @cruds = @{$cruds_node->{crud}};
+
+   my $CRUDS_NEW = XML::Smart->new();
+   $CRUDS_NEW = $CRUDS_NEW->{cruds};
+
    foreach(@cruds){
-       print $_->tree->{mask};
-       print "\n";
+       push(@{$CRUDS_NEW->{crud}}, $_);
    }
-   
-  # print Dumper($cruds_ref->tree_ok);
+
+    ## dump data
+    my $data = Dumper($CRUDS_NEW->data);
+
+    my @lines = split(/\n/,$data);
+    foreach(@lines){
+        if(/meta/ || /xml/ || /[\$;]/){
+            next;
+        }
+        print;
+        print "\n";
+    }
+}
+
+sub crud_reset {
+    my $configuration =  $XML->{project}{build}{plugins}{plugin}{configuration};
+    my @empty=();
+    $configuration->{cruds} = \@empty;
 }
 
 sub crud_add_one {
-   my($crud_tab) = @_;
-   
-   my $cruds_ref =  $XML->{project}{build}{plugins}{plugin}{configuration}{cruds};
-   
-   my $crud = &create_crud_one($crud_tab);
-   
-   $cruds_ref->{crud} = crud_tab;
+   my($tab) = @_;
+
+   my $cruds_node =  $XML->{project}{build}{plugins}{plugin}{configuration}{cruds};
+
+   ## build hash for create_crud
+   my $hash = {};
+   $hash->{mask} = 'master';
+   $hash->{master} = $tab;
+
+   my $crud = &create_crud($hash);
+   $crud = $crud->cut_root;
+
+   push(@{$cruds_node->{crud}}, $crud->pointer);
+}
+
+sub crud_add_onemany {
+
+}
+
+sub crud_add_manymany{
+
 }
 
 ########################################
@@ -254,13 +313,68 @@ sub create_table {
 ########################################
 ## CRUD Builder 
 ########################################
-sub create_crud_one {
-    my ($master) = @_;
-    
+sub create_crud {
+    my ($hash) = @_;
+    # $hash = $crud_ref->pointer_ok;
+
     my $CRUD = XML::Smart->new();
-        my $one = $CRUD->{crud};
-        $one->{mask}->content(0, 'master');
-        $one->{master}->content(0, $master);
+
+        my $node = $CRUD->{crud};
+
+        if( exists $hash->{mask}){
+            my $mask = $hash->{mask};
+            $node->{mask}->content(0, $mask);
+        }
+
+        if(exists $hash->{master}){
+            my $master = $hash->{master};
+           $node->{master}->content(0, $master);
+        }
+
+        if(exists $hash->{masterId}){
+            my $masterId = $hash->{masterId};
+           $node->{masterId}->content(0, $masterId);
+        }
+
+        # CHILDREN
+        if(exists $hash->{children}){
+            my @nodes = $hash->{children}->nodes;
+
+            foreach(@nodes){
+                push(@{$node->{children}->{child}}, $_);
+            }
+        }
+
+        # SLAVES
+        if(exists $hash->{slaves}){
+            my @nodes = $hash->{slaves}->nodes;
+
+            foreach(@nodes){
+                push(@{$node->{slaves}->{slave}}, $_);
+            }
+        }
+
+        # PEER
+        if(exists $hash->{masterPeer}){
+            my $masterPeer = $hash->{masterPeer};
+           $node->{masterPeer}->content(0, $masterPeer);
+        }
+
+        if(exists $hash->{relation}){
+            my $relation = $hash->{relation};
+           $node->{relation}->content(0, $relation);
+        }
+
+        # GROUP
+        if(exists $hash->{group}){
+            my $group = $hash->{group};
+           $node->{group}->content(0, $group);
+        }
+
+        if(exists $hash->{groupBy}){
+            my $groupBy = $hash->{groupBy};
+           $node->{groupBy}->content(0, $groupBy);
+        }
         
     return $CRUD;
 }

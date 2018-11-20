@@ -19,11 +19,9 @@
         <relation>relation_table_name</relation>
     </crud>
     <!--group-->
-    <cruds>
-        <crud>
-            <mask>group</mask>
-            <group>group_table_name</group>
-            <groupBy>groupBy_table_name</groupBy>
-        </crud>
-    </cruds>
+    <crud>
+        <mask>group</mask>
+        <group>group_table_name</group>
+        <groupBy>groupBy_table_name</groupBy>
+    </crud>
 </cruds>

@@ -1,51 +1,15 @@
 #!/usr/bin/env perl
-## change the port from 8080 to custom
-use lib qw(local);
-use XML::Smart;
-use Data::Dumper;
 
-sub usage {
-    print "Usage: \n";
-    print "   crud create one      <master>\n";
-    print "   crud create onemany  <master> <masterId> <slave> [...]\n";
-    print "   crud create manymany <master> <peer> <relation>\n";
-    print "   crud create group    <group>  [by]\n";
+print `date`;
+
+my $count = 0;
+
+for ($i=0; $i<=100000000; $i++){
+    $count = $count + $i;
+    #print "$count";
+    #print "\n";
 }
 
-## get args
-my $cmd = shift @ARGV;
-my $crud = shift @ARGV;
+print "count = $count\n";
 
-if( !$crud || ($cmd != /create/) ){
-   usage();
-   exit(0);
-}
-
-## create new xml object
-
-
-if($crud =~ /^one$/){
-   my $master = shift @ARGV;
-   if(! $master){
-     usage();
-     exit();
-   }
-   my $xml = &create_crud_one($master);
-   ## dump
-   print Dumper($xml->data);
-}
-
-sub create_crud_one {
-    my ($master) = @_;
-    
-    my $CRUD = XML::Smart->new();
-        my $one = $CRUD->{crud};
-        $one->{master}->content(0, $master);
-    return $CRUD;
-}
-
-
-
-
-
-
+print `date`;
