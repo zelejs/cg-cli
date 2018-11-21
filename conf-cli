@@ -46,7 +46,7 @@ sub usage {
     print "   conf-cli crud  add one      <master>\n";
     print "   conf-cli crud  add onemany  <master> <slave:mid> [...]\n";
     print "   conf-cli crud  add manymany <master> <peer> <relation>\n";
-    print "   conf-cli crud  add group    <group> [groupBy]\n";
+    print "   conf-cli crud  add group    <group> [groupBy] [groupId]\n";
 }
 sub usage_list {
     print "Usage: \n";
@@ -63,14 +63,14 @@ sub usage_crud {
     print "   conf-cli crud  add one      <master>\n";
     print "   conf-cli crud  add onemany  <master> <slave:mid> [...]\n";
     print "   conf-cli crud  add manymany <master> <peer> <relation>\n";
-    print "   conf-cli crud  add group    <group> [groupBy]\n";
+    print "   conf-cli crud  add group    <group> [groupBy] [groupId]\n";
 }
 sub usage_crud_add {
     print "Usage: \n";
     print "   conf-cli crud  add one      <master>\n";
     print "   conf-cli crud  add onemany  <master> <slave:mid> [...]\n";
     print "   conf-cli crud  add manymany <master> <peer> <relation>\n";
-    print "   conf-cli crud  add group    <group> [groupBy]\n";
+    print "   conf-cli crud  add group    <group> [groupBy] [groupId]\n";
 }
 
 if( !$domain ){
@@ -147,7 +147,7 @@ elsif ($domain =~ /^crud$/){
 
         elsif($op =~ /^group$/){
             ## ok
-            if ($arg<2){
+            if ($arg<1){
                 usage_crud_add;
                 exit;
             }
@@ -262,10 +262,23 @@ elsif($domain =~ /^table$/){
             }
            
         }elsif ($op =~ /^group$/){
-            my $group = shift @ARGV;
-            my $groupBy = shift @ARGV;
 
-            &crud_add_group($group, $groupBy);
+            my @args_in = @ARGV;
+            ## skip --dump, --save
+            my @args;
+            foreach(@args_in){
+                if(/^--/){
+                    next;
+                }
+                push(@args, $_);
+            }
+            ## skip end
+
+            my $group = shift @args;
+            my $groupBy = shift @args;
+            my $groupId = shift @args;
+
+            &crud_add_group($group, $groupBy, $groupId);
             if($list){
                 &crud_list;
             }
@@ -455,7 +468,7 @@ sub crud_add_manymany{
     my $hash = {};
     $hash->{mask} = 'peer';
     $hash->{master} = $master;
-    $hash->{peer} = $peer;
+    $hash->{masterPeer} = $peer;
     $hash->{relation} = $relation;
 
     my $crud = &create_crud($hash);
@@ -465,7 +478,7 @@ sub crud_add_manymany{
 }
 
 sub crud_add_group{
-    my($group, $groupBy) = @_;
+    my($group, $groupBy, $groupId) = @_;
 
     my $cruds_node =  $XML->{project}{build}{plugins}{plugin}{configuration}{cruds};
 
@@ -473,7 +486,11 @@ sub crud_add_group{
     my $hash = {};
     $hash->{mask} = 'group';
     $hash->{group} = $group;
-    $hash->{groupBy} = $groupBy;
+
+    if($groupBy){
+        $hash->{groupBy} = $groupBy;
+        $hash->{groupId} = $groupId;
+    }
 
     my $crud = &create_crud($hash);
     $crud = $crud->cut_root;
@@ -581,10 +598,14 @@ sub create_crud {
             my $groupBy = $hash->{groupBy};
            $node->{groupBy}->content(0, $groupBy);
         }
+
+        if(exists $hash->{groupId}){
+            my $groupId = $hash->{groupId};
+           $node->{groupId}->content(0, $groupId);
+        }
         
     return $CRUD;
 }
-
 
 
 
