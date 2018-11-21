@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/env-test-dao.iml" filepath="$PROJECT_DIR$/env-test-dao.iml" />
+      <module fileurl="file://$PROJECT_DIR$/code-generated-artifact.iml" filepath="$PROJECT_DIR$/code-generated-artifact.iml" />
     </modules>
   </component>
 </project>

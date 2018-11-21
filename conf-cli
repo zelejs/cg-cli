@@ -44,9 +44,9 @@ sub usage {
     print "   conf-cli table add <table> [...]\n";
     print "   conf-cli crud  reset\n";
     print "   conf-cli crud  add one      <master>\n";
-    print "   conf-cli crud  add onemany  <master> <masterId> <slave> [...]\n";
-    print "   conf-cli crud  add manymany <master> <peer>  <relation>\n";
-    print "   conf-cli crud  add group    <group>  [by]\n";
+    print "   conf-cli crud  add onemany  <master> <slave:mid> [...]\n";
+    print "   conf-cli crud  add manymany <master> <peer> <relation>\n";
+    print "   conf-cli crud  add group    <group> [groupBy]\n";
 }
 sub usage_list {
     print "Usage: \n";
@@ -61,16 +61,16 @@ sub usage_crud {
     print "Usage: \n";
     print "   conf-cli crud  reset\n";
     print "   conf-cli crud  add one      <master>\n";
-    print "   conf-cli crud  add onemany  <master> <masterId>  <slave> [...]\n";
-    print "   conf-cli crud  add manymany <master> <peer>  <relation>\n";
-    print "   conf-cli crud  add group    <group>  [by]\n";
+    print "   conf-cli crud  add onemany  <master> <slave:mid> [...]\n";
+    print "   conf-cli crud  add manymany <master> <peer> <relation>\n";
+    print "   conf-cli crud  add group    <group> [groupBy]\n";
 }
 sub usage_crud_add {
     print "Usage: \n";
     print "   conf-cli crud  add one      <master>\n";
-    print "   conf-cli crud  add onemany  <master> <masterId> <slave> [...]\n";
-    print "   conf-cli crud  add manymany <master> <peer>  <relation>\n";
-    print "   conf-cli crud  add group    <group>  [by]\n";
+    print "   conf-cli crud  add onemany  <master> <slave:mid> [...]\n";
+    print "   conf-cli crud  add manymany <master> <peer> <relation>\n";
+    print "   conf-cli crud  add group    <group> [groupBy]\n";
 }
 
 if( !$domain ){
@@ -131,7 +131,7 @@ elsif ($domain =~ /^crud$/){
 
         }elsif($op =~ /^onemany$/){
             ## ok
-            if ($arg<3){
+            if ($arg<2){
                 usage_crud_add;
                 exit;
             }
@@ -229,12 +229,11 @@ elsif($domain =~ /^table$/){
             my $master = shift @ARGV;
             &crud_add_one($master);
             if($list){
-                &table_list;
+                &crud_list;
             }
            
         }elsif ($op =~ /^onemany$/){
             my $master = shift @ARGV;
-            my $masterId = shift @ARGV;
             my @slaves_in = @ARGV;
 
             ## skip --dump, --save
@@ -247,9 +246,9 @@ elsif($domain =~ /^table$/){
             }
             ## skip end
 
-            &crud_add_onemany($master,$masterId,\@slaves);
+            &crud_add_onemany($master,\@slaves);
             if($list){
-                &table_list;
+                &crud_list;
             }
            
         }elsif ($op =~ /^manymany$/){
@@ -259,7 +258,7 @@ elsif($domain =~ /^table$/){
 
             &crud_add_manymany($master, $peer, $relation);
             if($list){
-                &table_list;
+                &crud_list;
             }
            
         }elsif ($op =~ /^group$/){
@@ -268,9 +267,8 @@ elsif($domain =~ /^table$/){
 
             &crud_add_group($group, $groupBy);
             if($list){
-                &table_list;
+                &crud_list;
             }
-            
         }
     }
 }
@@ -329,7 +327,18 @@ sub table_list {
 
 sub table_add {
     my ($tabs_ref) = @_;
-    my @tabs = @{$tabs_ref};
+    my @tabs_mid = @{$tabs_ref};
+
+    ## get masterId from slave
+    my @tabs;
+    my $masterId = undef;
+    foreach(@tabs_mid){
+        ## get slave table
+        my $tab = $_;
+        $tab =~ s/:\w+$//;
+        push(@tabs, $tab);
+    }
+    ## end
  
     my $tables_node =  $XML->{project}{build}{plugins}{plugin}{configuration}{tables};
 
@@ -400,8 +409,25 @@ sub crud_add_one {
 }
 
 sub crud_add_onemany {
-    my($master, $masterId, $slaves_ref) = @_;
-    my @slaves = @{$slaves_ref};
+    my($master, $slaves_ref) = @_;
+    my @slaves_mid = @{$slaves_ref};
+
+    ## get masterId from slave
+    my @slaves;
+    my $masterId = undef;
+    foreach(@slaves_mid){
+        ## get masterId only at first slave
+        if(!($masterId)){
+           $masterId = $_;
+           $masterId =~ s/^\w+://;
+        }
+
+        ## get slave table
+        my $slave = $_;
+        $slave =~ s/:\w+$//;
+        push(@slaves, $slave);
+    }
+    ## end
 
     my $cruds_node =  $XML->{project}{build}{plugins}{plugin}{configuration}{cruds};
 
@@ -409,8 +435,10 @@ sub crud_add_onemany {
     my $hash = {};
     $hash->{mask} = 'master';
     $hash->{master} = $master;
-    $hash->{masterId} = $masterId;
     $hash->{slaves} = \@slaves;
+    ## get masterId from slave
+    $hash->{masterId} = $masterId;
+
 
     my $crud = &create_crud($hash);
     $crud = $crud->cut_root;
@@ -520,16 +548,16 @@ sub create_crud {
         if(exists $hash->{slaves}){
             my @slaves = @{$hash->{slaves}};
 
-            my $SLAVES = XML::Smart->new();
+            my $SLAVE = XML::Smart->new();
 
             foreach(@slaves){
                 my $slave_new = XML::Smart->new();
                 $slave_new->content(0, $_);
 
-                push(@{$SLAVES->{slave}}, $slave_new);
+                push(@{$SLAVE->{slave}}, $slave_new);
             }
 
-            push(@{$node->{slaves}->{slave}}, $SLAVES->nodes);
+            push(@{$node->{slaves}}, $SLAVE);
         }
 
         # PEER

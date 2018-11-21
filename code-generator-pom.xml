@@ -7,7 +7,7 @@
     <version>1.0.0</version>
 
     <properties>
-        <moduleName>test</moduleName>
+        <moduleName>cg</moduleName>
         <url>jdbc:mysql://ok.zele.pro/test?user=root&amp;password=root&amp;characterEncoding=utf8</url>
         <init>false</init>
     </properties>

@@ -6,10 +6,16 @@ usage() {
   echo "    cg-cli show tables"
   echo "    cg-cli show create table <table-name>"
   echo "    cg-cli crud one      <master>"
-  echo "    cg-cli crud onemany  <master> <masterId> <slave> [...]"
+  echo "    cg-cli crud onemany  <master> <slave:mid> [...]"
   echo "    cg-cli crud manymany <master> <peer> <relation>"
-  echo "    cg-cli crud group    <group>  [by]"
+  echo "    cg-cli crud group    <group> [groupBy]"
   echo "    cg-cli initialize <table> [...]"
+  echo "    cg-cli test init"
+  echo "    cg-cli test run sql"
+  echo "    cg-cli test crud one"
+  echo "    cg-cli test crud onemany"
+  echo "    cg-cli test crud manymany"
+  echo "    cg-cli test crud group"
 }
 
 cmd=$1
@@ -65,16 +71,16 @@ elif [ "$cmd"x == "crud"x ];then
       cmd=crudone
 
    elif [ "$2"x == "onemany"x ];then
-      # $3-master; $4-masterId, $5-slave
+      # $3-master; $4-slave:mid
      
       ## check usage
-      if [ ! $5 ];then
+      if [ ! $4 ];then
          usage
          exit
       fi 
       ## end
 
-      cmd=crudmany
+      cmd=crudonemany
 
    elif [ "$2"x == "manymany"x ];then
        # $3-master; $4-peer, $5-relation
@@ -106,8 +112,35 @@ elif [ "$cmd"x == "initialize"x ];then
       usage
       exit
    fi
+elif [ "$cmd"x == "test"x ];then
+   if [ "$2"x == "init"x ];then
+       cmd=testinit
+   elif [ "$2"x == "run"x ];then 
+      if [ ! $3 ];then
+         usage
+         exit
+      fi
+      cmd=testrunsql
+   elif [  "$2"x == "crud"x ];then 
+       if [ "$3"x == "one"x ];then
+           cmd=testcrudone
+       elif [ "$3"x == "onemany"x ];then
+           cmd=testcrudonemany
+       elif [ "$3"x == "manymany"x ];then
+           cmd=testcrudmanymany
+       elif [ "$3"x == "group"x ];then
+           cmd=testcrudgroup
+       else
+         usage
+         exit
+       fi
+   else
+      usage
+      exit
+   fi
 else
     usage
+    exit
 fi
 
 
@@ -139,8 +172,8 @@ match_database(){
    echo $db
 }
 
-## test mysql
-sanity_test() {
+## sanity test for mysql
+sanity() {
    mysql_test=$($dir/mysql-test/bin/mysql-test $url "select now()")
    if [ "$mysql_test" ];then
       echo "Connection to $url succeeded!"
@@ -180,17 +213,37 @@ initialize() {
    mvn -Dinit=true com.jfeat:sb-code-generator:1.3.0:generate -f $pom
 }
 
+testinit(){
+   if [ ! -d src/main/resources/sql ];then
+       mkdir -p src/main/resources/sql
+   fi
+   if [ ! -e src/main/resources/sql/cg-mysql-schema.sql ];then
+       cp assets/sql/cg-mysql-schema.sql src/main/resources/sql
+   fi
+}
+
+testrunsql(){
+    for sql in $(ls src/main/resources/sql/*.sql);do
+       echo $sql
+       $dir/mysql-test/bin/mysql-test $url $sql
+    done
+}
+
 gen() {
    if [ "$gen"x == "--gen"x ];then
       mvn com.jfeat:sb-code-generator:1.3.0:generate -f $pom
    fi
 }
 
+testcrudone(){
+   
+}
+
 
 ### main ##
 
 if [ "$cmd"x == "sanity"x ];then
-   sanity_test
+   sanity
 
 elif [ "$cmd"x == "showtables"x ];then
    showtables
@@ -215,15 +268,19 @@ elif [ "$cmd"x == "crudone"x ];then
    gen
 
 elif [ "$cmd"x == "crudonemany"x ];then
-   master=$3; shift;
-   masterId=$4; shift;
+   master=$3; 
+   
+   shift; ## shift cmd
+   shift; ## shift onemany
+   shift; ## shift master
 
    # config table
-   sh $dir/conf-cli table reset --save
-   sh $dir/conf-cli table add $master $@ --save
+   $dir/conf-cli table reset --save
+   $dir/conf-cli table add $master $@ --save
+
    # config crud
-   sh $dir/conf-cli crud reset --save
-   sh $dir/conf-cli crud add onemany $master $masterId $@ --save
+   $dir/conf-cli crud reset --save
+   $dir/conf-cli crud add onemany $master $@ --save
    # config end
 
    $dir/conf-cli list -t -c
@@ -236,14 +293,16 @@ elif [ "$cmd"x == "crudonemany"x ];then
    relation=$5
 
    # config table
-   sh $dir/conf-cli table reset --save
-   sh $dir/conf-cli table add $master $peer --save
+   $dir/conf-cli table reset --save
+   $dir/conf-cli table add $master $peer --save
    # config crud
-   sh $dir/conf-cli crud reset --save
-   sh $dir/conf-cli crud add manymany $master $peer $relation --save
+   $dir/conf-cli crud reset --save
+   $dir/conf-cli crud add manymany $master $peer $relation --save
    # config end
-
+   
+   # show the result [-t - show tables] and  [-c - show cruds]
    $dir/conf-cli list -t -c
+
    ## gen crud
    gen
 
@@ -252,11 +311,11 @@ elif [ "$cmd"x == "crudgroup"x ];then
    groupBy=$4;
 
    # config table
-   sh $dir/conf-cli table reset --save
-   sh $dir/conf-cli table add $group $groupBy --save
+   $dir/conf-cli table reset --save
+   $dir/conf-cli table add $group $groupBy --save
    # config crud
-   sh $dir/conf-cli crud reset --save
-   sh $dir/conf-cli crud add group $group $groupBy --save
+   $dir/conf-cli crud reset --save
+   $dir/conf-cli crud add group $group $groupBy --save
    # config end
 
    $dir/conf-cli list -t -c
@@ -265,10 +324,29 @@ elif [ "$cmd"x == "crudgroup"x ];then
 
 elif [ "$cmd"x == "initialize"x ];then
    # config tables
-   sh $dir/conf-cli table reset --save
-   sh $dir/conf-cli table add $@ --save
+   $dir/conf-cli table reset --save
+   $dir/conf-cli table add $@ --save
 
    # gen persistance
    initialize
-fi
+elif [ "$cmd"x == "testinit"x ];then
 
+   ## mkdir -p src/main/resources/sql
+   testinit
+
+   ## check result
+   schema='src/main/resources/sql/cg-mysql-schema.sql'
+   if [ ! -e $schema ];then
+       echo "Create $schema has been failed !"
+       exit
+   else 
+       ls $schema
+   fi
+
+elif [ "$cmd"x == "testrunsql"x ];then
+    testrunsql
+
+else
+    usage
+    exit
+fi
