@@ -1,19 +1,15 @@
 #!/usr/bin/env bash
 usage() {
-  echo "Usage: cg-cli crud one      <master>"
-  echo "       cg-cli crud onemany  <master> <slave>"
-  echo "       cg-cli crud manymany <master> <peer> <relation>"
-  echo "       cg-cli crud group    <group>  [by]"
-  echo "       cg-cli show tables"
-  echo "       cg-cli show create table <table-name>"
-  echo "       cg-cli gen  <table> [...]"
-  echo "--"
-  echo "   gen  ## gen with initialize=true"
+  echo "Usage:"
+  echo "    cg-cli sanity"
+  echo "    cg-cli show tables"
+  echo "    cg-cli show create table <table-name>"
+  echo "    cg-cli crud one      <master>"
+  echo "    cg-cli crud onemany  <master> <masterId> <slave> [...]"
+  echo "    cg-cli crud manymany <master> <peer> <relation>"
+  echo "    cg-cli crud group    <group>  [by]"
+  echo "    cg-cli initialize <table> [...]"
 }
-usage_gen() {
-   echo "Usage: cg-cli gen <table> ..."
-}
-
 
 cmd=$1
 if [ ! $cmd ];then
@@ -21,31 +17,99 @@ if [ ! $cmd ];then
    exit
 fi
 
-if [ "$cmd"x == "show"x ];then
+if [ "$cmd"x == "sanity"x ];then
+   echo 'ok' > /dev/null
+
+elif [ "$cmd"x == "show"x ];then
    if [ "$2"x == "tables"x ];then
       cmd=showtables
+
    elif [ "$2"x == "create"x -a "$3"x == "table"x ];then
+
+      ## check usage
       if [ ! $4 ];then
          usage
          exit
       fi 
+      ## end
+
       cmd=showcreatetable
    fi
-fi
 
-if [ "$cmd"x == "gen"x ];then
+elif [ "$cmd"x == "crud"x ];then
+   if [ "$2"x == "one"x ];then
+      
+      ## check usage
+      if [ ! $3 ];then
+         usage
+         exit
+      fi 
+      ## end
+
+      cmd=crudone
+
+   elif [ "$2"x == "onemany"x];then
+      # $3-master; $4-masterId, $5-slave
+     
+      ## check usage
+      if [ ! $5 ];then
+         usage
+         exit
+      fi 
+      ## end
+
+      cmd=crudmany
+   fi
+
+   elif [ "$2"x == "manymany"x];then
+       # $3-master; $4-peer, $5-relation
+
+      ## check usage
+      if [ ! $5 ];then
+         usage
+         exit
+      fi 
+      ## end
+
+      cmd=crudmanymany
+   
+   elif [ "$2"x == "group"x];then
+       # $3-group; $4-groupBy
+
+      ## check usage
+      if [ ! $4 ];then
+         usage
+         exit
+      fi 
+      ## end
+
+      cmd=crudgroup
+   fi
+
+elif [ "$cmd"x == "initialize"x ];then
    if [ ! $2 ];then
-      usage_gen
+      usage
       exit
    fi
    shift
+
+else
+    usage
 fi
+
+
+### start ###
 
 dir=$(dirname $0)
 
 POM=code-generator-pom.xml
-pom=$dir/$POM
-pom_gen=$dir/gen/$POM
+pom=$dir/gen/$POM
+if [ ! -e $pom ];then
+   if [ ! -d $dir/gen ];then
+       mkdir $dir/gen
+   fi
+   cp $dir/$POM $pom
+fi
 
 ## get connection string
 url=$(grep "<url>" $pom)
@@ -54,11 +118,7 @@ url=${url#*<url>}
 url=${url//amp;/}
 #echo $url
 
-gen() {
-   mvn -Dinit=true com.jfeat:sb-code-generator:1.2.3:generate -f $pom_gen
-}
-
-getdatabase(){
+match_database(){
    #cut after ?
    db=$url
    db=${db##*/}
@@ -66,8 +126,18 @@ getdatabase(){
    echo $db
 }
 
+## test mysql
+sanity_test() {
+   mysql_test=$($dir/mysql-test/bin/mysql-test $url "select now()")
+   if [ "$mysql_test" ];then
+      echo "Connection to $url succeeded!"
+   else
+      exit
+   fi
+}
+
 showtables() {
-    db=$(getdatabase)
+    db=$(match_database)
     sql="select TABLE_NAME from INFORMATION_SCHEMA.TABLES where TABLE_SCHEMA='$db' and TABLE_NAME <> 'schema_version'"
     for t in $($dir/mysql-test/bin/mysql-test "$url" "$sql");do
         echo $t
@@ -85,32 +155,93 @@ showcreatetable() {
     #done
 }
 
-## test mysql
-test_connection() {
-   mysql_test=$($dir/mysql-test/bin/mysql-test $url "select now()")
-   if [ "$mysql_test" ];then
-      return 0
-   else
-      return 1
-   fi
+initialize() {
+   mvn -Dinit=true com.jfeat:sb-code-generator:1.2.3:generate -f $pom
 }
 
-#test_connection
+gen() {
+   mvn com.jfeat:sb-code-generator:1.2.3:generate -f $pom
+}
 
-if [ $? -eq 0 ];then
-  echo '' > /dev/null
-else
-  exit
-fi
 
-if [ "$cmd"x == "showtables"x ];then
+### main ##
+
+if [ "$cmd"x == "sanity"x ];then
+   sanity_test
+
+elif [ "$cmd"x == "showtables"x ];then
    showtables
+
 elif [ "$cmd"x == "showcreatetable"x ];then
-   showcreatetable $4
-elif [ "$cmd"x == "gen"x ];then
-   # config tables
-   $dir/conf-cli table add $@
-   # gen persistance
+   tab=$3
+   showcreatetable $tab
+
+elif [ "$cmd"x == "crudone"x ];then
+   master=$3
+ 
+   # config table
+   sh $dir/conf-cli table reset --save
+   sh $dir/conf-cli table add $master --save
+   # config crud
+   sh $dir/conf-cli crud reset --save
+   sh $dir/conf-cli crud add one $master --save
+   # config end
+
+   ## gen crud
    gen
+
+elif [ "$cmd"x == "crudonemany"x ];then
+   master=$3; shift;
+   masterId=$4; shift;
+
+   # config table
+   sh $dir/conf-cli table reset --save
+   sh $dir/conf-cli table add $master $@ --save
+   # config crud
+   sh $dir/conf-cli crud reset --save
+   sh $dir/conf-cli crud add onemany $master $masterId $@ --save
+   # config end
+
+   ## gen crud
+   gen
+
+ elif [ "$cmd"x == "crudmanymany"x ];then
+   master=$3; 
+   peer=$4; 
+   relation=$5
+
+   # config table
+   sh $dir/conf-cli table reset --save
+   sh $dir/conf-cli table add $master $peer --save
+   # config crud
+   sh $dir/conf-cli crud reset --save
+   sh $dir/conf-cli crud add manymany $master $peer $relation --save
+   # config end
+
+   ## gen crud
+   gen
+
+elif [ "$cmd"x == "crudgroup"x ];then
+   group=$3;
+   groupBy=$4;
+
+   # config table
+   sh $dir/conf-cli table reset --save
+   sh $dir/conf-cli table add $group $groupBy --save
+   # config crud
+   sh $dir/conf-cli crud reset --save
+   sh $dir/conf-cli crud add group $group $groupBy --save
+   # config end
+
+   ## gen crud
+   gen
+
+elif [ "$cmd"x == "initialize"x ];then
+   # config tables
+   sh $dir/conf-cli table reset --save
+   sh $dir/conf-cli table add $@ --save
+
+   # gen persistance
+   initialize
 fi
 
