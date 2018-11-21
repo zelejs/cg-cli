@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 usage() {
   echo "Usage:"
+  echo "    cg-cli [-h] [--help] +[--gen]"
   echo "    cg-cli sanity"
   echo "    cg-cli show tables"
   echo "    cg-cli show create table <table-name>"
@@ -12,10 +13,22 @@ usage() {
 }
 
 cmd=$1
+gen='-'
 if [ ! $cmd ];then
    usage
    exit
 fi
+for p in $@;do
+   if [ "$p"x == "-h"x -o "$p"x == "--help"x ];then
+      usage
+      exit
+   fi
+
+   ## get check
+   if [ "$p"x == "--gen"x ];then
+      gen='--gen'
+   fi
+done
 
 if [ "$cmd"x == "sanity"x ];then
    echo 'ok' > /dev/null
@@ -34,6 +47,9 @@ elif [ "$cmd"x == "show"x ];then
       ## end
 
       cmd=showcreatetable
+   else
+       usage
+       exit
    fi
 
 elif [ "$cmd"x == "crud"x ];then
@@ -48,7 +64,7 @@ elif [ "$cmd"x == "crud"x ];then
 
       cmd=crudone
 
-   elif [ "$2"x == "onemany"x];then
+   elif [ "$2"x == "onemany"x ];then
       # $3-master; $4-masterId, $5-slave
      
       ## check usage
@@ -59,9 +75,8 @@ elif [ "$cmd"x == "crud"x ];then
       ## end
 
       cmd=crudmany
-   fi
 
-   elif [ "$2"x == "manymany"x];then
+   elif [ "$2"x == "manymany"x ];then
        # $3-master; $4-peer, $5-relation
 
       ## check usage
@@ -73,7 +88,7 @@ elif [ "$cmd"x == "crud"x ];then
 
       cmd=crudmanymany
    
-   elif [ "$2"x == "group"x];then
+   elif [ "$2"x == "group"x ];then
        # $3-group; $4-groupBy
 
       ## check usage
@@ -91,8 +106,6 @@ elif [ "$cmd"x == "initialize"x ];then
       usage
       exit
    fi
-   shift
-
 else
     usage
 fi
@@ -144,23 +157,33 @@ showtables() {
     done
 }
 
-#IFS=$'\n'
 showcreatetable() {
     table=$1
     sql="show create table $table"
     result=$($dir/mysql-test/bin/mysql-test "$url" "$sql")
-    echo $result
-    #for l in $result;do
-    #   echo $l
-    #done
+    #result="'tenant'|'CREATE TABLE \`tenant\` ( \`id\` bigint(20) NOT NULL, \`status\` int(11) DEFAULT NULL, \`name\` varchar(255) DEFAULT NULL, \`delete_flag\` int(11) NOT NULL DEFAULT '1', PRIMARY KEY (\`id\`)) ENGINE=InnoDB DEFAULT CHARSET=utf8'"
+
+    result=${result#*[|]}
+    result=${result#*[\']}
+    result=${result%[\']*}
+    result=${result//,/,!}
+
+    #result=${result#*[(]}
+    #result=${result%[)]*}
+    #arr=(${result//,/})
+    #arr=($(echo "$result" | tr ',' '\n'))
+    
+    echo $result | tr '!' '\n'
 }
 
 initialize() {
-   mvn -Dinit=true com.jfeat:sb-code-generator:1.2.3:generate -f $pom
+   mvn -Dinit=true com.jfeat:sb-code-generator:1.3.0:generate -f $pom
 }
 
 gen() {
-   mvn com.jfeat:sb-code-generator:1.2.3:generate -f $pom
+   if [ "$gen"x == "--gen"x ];then
+      mvn com.jfeat:sb-code-generator:1.3.0:generate -f $pom
+   fi
 }
 
 
@@ -173,20 +196,21 @@ elif [ "$cmd"x == "showtables"x ];then
    showtables
 
 elif [ "$cmd"x == "showcreatetable"x ];then
-   tab=$3
+   tab=$4
    showcreatetable $tab
 
 elif [ "$cmd"x == "crudone"x ];then
    master=$3
  
    # config table
-   sh $dir/conf-cli table reset --save
-   sh $dir/conf-cli table add $master --save
+   $dir/conf-cli table reset --save
+   $dir/conf-cli table add $master --save
    # config crud
-   sh $dir/conf-cli crud reset --save
-   sh $dir/conf-cli crud add one $master --save
+   $dir/conf-cli crud reset --save
+   $dir/conf-cli crud add one $master --save
    # config end
 
+   $dir/conf-cli list -t -c
    ## gen crud
    gen
 
@@ -202,6 +226,7 @@ elif [ "$cmd"x == "crudonemany"x ];then
    sh $dir/conf-cli crud add onemany $master $masterId $@ --save
    # config end
 
+   $dir/conf-cli list -t -c
    ## gen crud
    gen
 
@@ -218,6 +243,7 @@ elif [ "$cmd"x == "crudonemany"x ];then
    sh $dir/conf-cli crud add manymany $master $peer $relation --save
    # config end
 
+   $dir/conf-cli list -t -c
    ## gen crud
    gen
 
@@ -233,6 +259,7 @@ elif [ "$cmd"x == "crudgroup"x ];then
    sh $dir/conf-cli crud add group $group $groupBy --save
    # config end
 
+   $dir/conf-cli list -t -c
    ## gen crud
    gen
 

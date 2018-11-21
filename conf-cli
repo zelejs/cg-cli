@@ -22,6 +22,7 @@ my $cmd = shift @ARGV;
 
 my $dump=undef;
 my $save=undef;
+my $list=undef;
 foreach(@ARGV){
   if(/--dump/){
     $dump=1
@@ -29,30 +30,36 @@ foreach(@ARGV){
   if(/--save/){
     $save=1
   }
+  if(/--list/){
+    $list=1
+  }
 }
 
 sub usage {
     print "Usage: \n";
+    print "   conf-cli [--list] [--save] [--dump]\n";
+    print "   conf-cli list -t -c\n";
+    print "";
     print "   conf-cli table reset\n";
-    print "   conf-cli table list [--dump] [--save]\n";
-    print "   conf-cli table add <table>  [...]\n";
+    print "   conf-cli table add <table> [...]\n";
     print "   conf-cli crud  reset\n";
-    print "   conf-cli crud  list\n";
     print "   conf-cli crud  add one      <master>\n";
     print "   conf-cli crud  add onemany  <master> <masterId> <slave> [...]\n";
     print "   conf-cli crud  add manymany <master> <peer>  <relation>\n";
     print "   conf-cli crud  add group    <group>  [by]\n";
 }
+sub usage_list {
+    print "Usage: \n";
+    print "   conf-cli list -t -c\n";
+}
 sub usage_table {
     print "Usage: \n";
     print "   conf-cli table reset\n";
-    print "   conf-cli table list [--dump] [--save]\n";
     print "   conf-cli table add <table>  [...]\n";
 }
 sub usage_crud {
     print "Usage: \n";
     print "   conf-cli crud  reset\n";
-    print "   conf-cli crud  list\n";
     print "   conf-cli crud  add one      <master>\n";
     print "   conf-cli crud  add onemany  <master> <masterId>  <slave> [...]\n";
     print "   conf-cli crud  add manymany <master> <peer>  <relation>\n";
@@ -70,8 +77,29 @@ if( !$domain ){
    usage();
    exit(0);
 }
+if($domain =~ /^list$/){
+    my @args;
+    push(@args, $cmd);
+    push(@args, @ARGV);
+    @ARGV = @args;
 
-if($domain =~ /^table$/){
+    my $args =@ARGV;
+    if($args==0){
+       usage_list;
+       exit;
+    }
+
+    foreach(@ARGV){
+        if(/-t/ || /-c/){
+            # ok
+        }else{
+            usage_list;
+            exit;
+        }
+    }
+}
+   
+elsif($domain =~ /^table$/){
    ## ok
    if($cmd =~ /^add$/){
       my $args = @ARGV;
@@ -79,7 +107,6 @@ if($domain =~ /^table$/){
          usage;
          exit;
       }
-   }elsif($cmd =~ /^list$/){
    }elsif($cmd =~ /^reset$/){
    }else{
       usage_table;
@@ -88,9 +115,7 @@ if($domain =~ /^table$/){
 }
 elsif ($domain =~ /^crud$/){
     ## ok
-    if($cmd =~ /^list$/){
-       ## ok
-    }elsif($cmd =~ /^reset$/){
+    if($cmd =~ /^reset$/){
        ## ok
     }elsif($cmd =~ /^add$/){
         ## ok
@@ -151,17 +176,25 @@ my $XML = XML::Smart->new($pom);
 
 
 ## 
-if($domain =~ /^table$/){
-    if($cmd =~ /list/){
-        &table_list;
-       
-    }elsif ($cmd =~ /add/){
+if($domain =~ /^list$/){
+    foreach(@ARGV){
+        if(/-t/){
+            &table_list;
+        }
+        if(/-c/){
+            &crud_list;
+        }
+    }
+}
+
+elsif($domain =~ /^table$/){
+    if ($cmd =~ /add/){
        my @tabs_in = @ARGV;
 
        ## skip --dump, --save
        my @tabs;
        foreach(@tabs_in){
-           if(/--dump/ || /--save/){
+           if(/^--/){
                next;
            }
            push(@tabs, $_);
@@ -169,21 +202,24 @@ if($domain =~ /^table$/){
        ## skip end
 
        &table_add(\@tabs);
-       &table_list;
+       if($list){
+           &table_list;
+       }
        
     }elsif ($cmd =~ /reset/){
        &table_reset();
-       &table_list;
+       if($list){
+           &table_list;
+       }
     }
     
 }elsif($domain =~ /^crud$/){
 
-    if($cmd =~ /^list$/){
-        &crud_list;
-        
-    }elsif($cmd =~ /^reset$/){
+    if($cmd =~ /^reset$/){
         &crud_reset;
-        &crud_list;
+        if($list){
+           &table_list;
+        }
 
     }elsif($cmd =~ /^add$/){
 
@@ -192,7 +228,9 @@ if($domain =~ /^table$/){
         if($op =~ /^one$/){
             my $master = shift @ARGV;
             &crud_add_one($master);
-            &crud_list;
+            if($list){
+                &table_list;
+            }
            
         }elsif ($op =~ /^onemany$/){
             my $master = shift @ARGV;
@@ -202,7 +240,7 @@ if($domain =~ /^table$/){
             ## skip --dump, --save
             my @slaves;
             foreach(@slaves_in){
-                if(/--dump/ || /--save/){
+                if(/^--/){
                     next;
                 }
                 push(@slaves, $_);
@@ -210,7 +248,9 @@ if($domain =~ /^table$/){
             ## skip end
 
             &crud_add_onemany($master,$masterId,\@slaves);
-            &crud_list;
+            if($list){
+                &table_list;
+            }
            
         }elsif ($op =~ /^manymany$/){
             my $master = shift @ARGV;
@@ -218,14 +258,18 @@ if($domain =~ /^table$/){
             my $relation = shift @ARGV;
 
             &crud_add_manymany($master, $peer, $relation);
-            &crud_list;
+            if($list){
+                &table_list;
+            }
            
         }elsif ($op =~ /^group$/){
             my $group = shift @ARGV;
             my $groupBy = shift @ARGV;
 
             &crud_add_group($group, $groupBy);
-            &crud_list;
+            if($list){
+                &table_list;
+            }
             
         }
     }
