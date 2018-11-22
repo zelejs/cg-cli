@@ -138,6 +138,9 @@ elif [ "$cmd"x == "test"x ];then
        if [ ! -e src/main/resources/sql/cg-mysql-schema.sql ];then
            cp assets/sql/cg-mysql-schema.sql src/main/resources/sql
        fi
+       if [ -d src/main/java ];then
+           rm -rf src/main/java
+       fi
        #end 
 
        if [ "$3"x == "one"x ];then
@@ -337,8 +340,14 @@ elif [ "$cmd"x == "crudgroup"x -o "$cmd"x == "testcrudgroup"x -o "$cmd"x == "tes
 
    if [ "$cmd"x == "crudgroup"x ];then
       group=$3;
-      groupBy=$4;
-      groupId=$5;
+
+      ## 因maven插件限制，group 与  groupby 需要分两次测试
+      if [ $4 ];then
+         groupBy=$4;
+         groupId=$5;
+
+         cmd="crudgroupby"
+      fi
 
    elif [ "$cmd"x == "testcrudgroup"x ];then
        group='cg_master_resource_category'
@@ -349,17 +358,40 @@ elif [ "$cmd"x == "crudgroup"x -o "$cmd"x == "testcrudgroup"x -o "$cmd"x == "tes
        groupId='category_id'
    fi
 
-   # config table
-   $dir/conf-cli table reset --save
-   $dir/conf-cli table add $group $groupBy --save
-   # config crud
-   $dir/conf-cli crud reset --save
-   $dir/conf-cli crud add group $group $groupBy $groupId --save
-   # config end
 
-   $dir/conf-cli list -t -c
-   ## gen crud
-   gen
+   ## gen group first step
+
+   if [ "$cmd"x == "crudgroup"x -o "$cmd"x == "crudgroupby"x -o "$cmd"x == "testcrudgroup"x ];then
+
+      # config table
+      $dir/conf-cli table reset --save
+      $dir/conf-cli table add $group --save
+      # config crud
+      $dir/conf-cli crud reset --save
+      $dir/conf-cli crud add group $group --save
+      # config end
+
+      $dir/conf-cli list -t -c
+      ## gen crud
+      gen
+   fi
+
+
+   ## gen groupby second step
+   if [ "$cmd"x == "crudgroupby"x -o "$cmd"x == "testcrudgroupby"x ];then
+       # config table
+      $dir/conf-cli table reset --save
+      $dir/conf-cli table add $groupBy --save
+      # config crud
+      $dir/conf-cli crud reset --save
+      $dir/conf-cli crud add group $group $groupBy $groupId --save
+      # config end
+
+      $dir/conf-cli list -t -c
+      ## gen crud
+      gen
+   fi
+
 
 elif [ "$cmd"x == "initialize"x ];then
    # config tables
