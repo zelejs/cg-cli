@@ -10,7 +10,7 @@ usage() {
   echo "    cg-cli crud manymany <master> <peer> <relation>"
   echo "    cg-cli crud group    <group> [groupBy] [groupId]"
   echo "    cg-cli initialize <table> [...]"
-  echo "    cg-cli test run sql"
+  echo "    cg-cli test run sql [schema.sql]"
   echo "    cg-cli test crud one"
   echo "    cg-cli test crud onemany"
   echo "    cg-cli test crud manymany"
@@ -126,7 +126,10 @@ elif [ "$cmd"x == "test"x ];then
         mkdir -p src/main/resources/sql
    fi
 
-   if [ "$2"x == "run"x ];then 
+   if  [ "$2"x == "init"x ];then 
+      cmd=testinit
+
+   elif [ "$2"x == "run"x ];then 
       if [ ! $3 ];then
          usage
          exit
@@ -134,15 +137,6 @@ elif [ "$cmd"x == "test"x ];then
       cmd=testrunsql
 
    elif [  "$2"x == "crud"x ];then 
-       ## copy default schema sql for crud test
-       if [ ! -e src/main/resources/sql/cg-mysql-schema.sql ];then
-           cp assets/sql/cg-mysql-schema.sql src/main/resources/sql
-       fi
-       if [ -d src/main/java ];then
-           rm -rf src/main/java
-       fi
-       #end 
-
        if [ "$3"x == "one"x ];then
            cmd=testcrudone
        elif [ "$3"x == "onemany"x ];then
@@ -243,6 +237,15 @@ gen() {
    fi
 }
 
+testinit(){
+   ## copy default schema sql for crud test
+   if [ ! -e src/main/resources/sql/cg-mysql-schema.sql ];then
+      cp assets/sql/cg-mysql-schema.sql src/main/resources/sql
+   fi
+   if [ -d src/main/java ];then
+      rm -rf src/main/java
+   fi
+}
 
 ### main ##
 
@@ -308,6 +311,7 @@ elif [ "$cmd"x == "testcrudonemany"x ];then
    # config end
 
    $dir/conf-cli list -t -c
+
    ## gen crud
    gen
     
@@ -401,7 +405,27 @@ elif [ "$cmd"x == "initialize"x ];then
    # gen persistance
    initialize
 
+elif [ "$cmd"x == "testinit"x ];then
+    testinit
+
 elif [ "$cmd"x == "testrunsql"x ];then
+    schemasql=$4
+
+    ## if user schema sql, check exists
+    if [ $schemasql ];then
+       if [ ! -e  $schemasql ];then
+           echo "schema sql $schemasql not found!"
+           exit
+       fi
+
+       $dir/mysql-test/bin/mysql-test $url $schemasql
+       exit  ## end
+    fi
+
+
+    ## make sure src/main/resources/sql/*.sql exists
+    testinit
+
     ## run all sql files
     for sql in $(ls src/main/resources/sql/*.sql);do
        echo $sql
