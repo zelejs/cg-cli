@@ -4,15 +4,16 @@ use lib qw(local);
 use XML::Smart;
 use Data::Dumper;
 
-my $dir = $0;
-$dir =~ s/\/[\w\.-]+$//;
+my $root = $0;
+$root =~ s/\/[\w\.-]+$//;
+$root =~ s/\/[\w\.-]+$//;
 my $POM = "code-generator-pom.xml";
-my $pom = "$dir/gen/$POM";
+my $pom = "$root/gen/$POM";
 if( ! (-e $pom) ){
-    if(!(-d "$dir/gen")){
-         print `mkdir $dir/gen`;
+    if(!(-d "$root/gen")){
+         print `mkdir $root/gen`;
     }
-    print `cp $dir/$POM $pom`;
+    print `cp $root/$POM $pom`;
 }
 
 
