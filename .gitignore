@@ -3,6 +3,6 @@ gen/
 .idea/
 .gradle/
 target/
-src/
+/src/
 pom.xml
 *.iml
