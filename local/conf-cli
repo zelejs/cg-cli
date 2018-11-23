@@ -44,7 +44,7 @@ sub usage {
     print "   conf-cli table reset\n";
     print "   conf-cli table add <table> [...]\n";
     print "   conf-cli crud  reset\n";
-    print "   conf-cli crud  add one      <master>\n";
+    print "   conf-cli crud  add one      <master> [...]\n";
     print "   conf-cli crud  add onemany  <master> <slave:mid> [...]\n";
     print "   conf-cli crud  add manymany <master> <peer> <relation>\n";
     print "   conf-cli crud  add group    <group> [groupBy] [groupId]\n";
@@ -61,14 +61,14 @@ sub usage_table {
 sub usage_crud {
     print "Usage: \n";
     print "   conf-cli crud  reset\n";
-    print "   conf-cli crud  add one      <master>\n";
+    print "   conf-cli crud  add one      <master> [...]\n";
     print "   conf-cli crud  add onemany  <master> <slave:mid> [...]\n";
     print "   conf-cli crud  add manymany <master> <peer> <relation>\n";
     print "   conf-cli crud  add group    <group> [groupBy] [groupId]\n";
 }
 sub usage_crud_add {
     print "Usage: \n";
-    print "   conf-cli crud  add one      <master>\n";
+    print "   conf-cli crud  add one      <master> [...]\n";
     print "   conf-cli crud  add onemany  <master> <slave:mid> [...]\n";
     print "   conf-cli crud  add manymany <master> <peer> <relation>\n";
     print "   conf-cli crud  add group    <group> [groupBy] [groupId]\n";
@@ -227,8 +227,10 @@ elsif($domain =~ /^table$/){
         my $op = shift @ARGV;
 
         if($op =~ /^one$/){
-            my $master = shift @ARGV;
-            &crud_add_one($master);
+            #my $master = shift @ARGV;
+            my $ones = \@ARGV;
+
+            &crud_add_one($ones);
             if($list){
                 &crud_list;
             }
@@ -407,19 +409,27 @@ sub crud_reset {
 }
 
 sub crud_add_one {
-   my($tab) = @_;
+   my($tabs_ref) = @_;
+   my @tabs = @{$tabs_ref};
 
    my $cruds_node =  $XML->{project}{build}{plugins}{plugin}{configuration}{cruds};
 
    ## build hash for create_crud
-   my $hash = {};
-   $hash->{mask} = 'master';
-   $hash->{master} = $tab;
+   foreach(@tabs){
+       if(/--/){
+           next;
+       }
+       my $tab = $_;
 
-   my $crud = &create_crud($hash);
-   $crud = $crud->cut_root;
+       my $hash = {};
+       $hash->{mask} = 'master';
+       $hash->{master} = $tab;
 
-   push(@{$cruds_node->{crud}}, $crud->pointer);
+       my $crud = &create_crud($hash);
+       $crud = $crud->cut_root;
+
+       push(@{$cruds_node->{crud}}, $crud->pointer);
+   }
 }
 
 sub crud_add_onemany {

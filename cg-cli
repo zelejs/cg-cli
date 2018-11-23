@@ -5,12 +5,12 @@ usage() {
   echo "    cg-cli sanity"
   echo "    cg-cli show tables"
   echo "    cg-cli show create table <table-name>"
-  echo "    cg-cli crud one      <master>"
+  echo "    cg-cli crud one      <master> [...]"
   echo "    cg-cli crud onemany  <master> <slave:mid> [...]"
   echo "    cg-cli crud manymany <master> <peer> <relation>"
   echo "    cg-cli crud group    <group> [groupBy] [groupId]"
   echo "    cg-cli initialize <table> [...]"
-  echo "    cg-cli test run sql [schema.sql]"
+  echo "    cg-cli test run sql [/path/to/schema.sql]"
   echo "    cg-cli test crud one"
   echo "    cg-cli test crud onemany"
   echo "    cg-cli test crud manymany"
@@ -269,19 +269,26 @@ elif [ "$cmd"x == "crudone"x -o "$cmd"x == "testcrudone"x ];then
 
    if [ "$cmd"x == "testcrudone"x ];then
       master='cg_master_resource'
-   fi 
- 
-   # config table
-   $CONFCLI table reset --save
-   $CONFCLI table add $master --save
-   # config crud
-   $CONFCLI crud reset --save
-   $CONFCLI crud add one $master --save
-   # config end
+   fi
 
-   $CONFCLI list -t -c
-   ## gen crud
-   gen
+   shift; ## shift crud
+   shift; ## shift one
+
+   for master in $@;do
+ 
+      # config table
+      $CONFCLI table reset --save
+      $CONFCLI table add $master --save
+      # config crud
+      $CONFCLI crud reset --save
+      $CONFCLI crud add one $master --save
+      # config end
+
+      $CONFCLI list -t -c
+      ## gen crud
+      gen
+
+   done
 
 elif [ "$cmd"x == "crudonemany"x ];then
    master=$3; 
@@ -426,7 +433,6 @@ elif [ "$cmd"x == "testrunsql"x ];then
        $dir/mysql-test/bin/mysql-test $url $schemasql
        exit  ## end
     fi
-
 
     ## make sure src/main/resources/sql/*.sql exists
     testinit
