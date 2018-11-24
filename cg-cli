@@ -13,6 +13,7 @@ usage() {
   echo "    cg-cli test run sql [/path/to/schema.sql]"
   echo "    cg-cli test crud one"
   echo "    cg-cli test crud onemany"
+  echo "    cg-cli test crud onemany x2"
   echo "    cg-cli test crud manymany"
   echo "    cg-cli test crud group"
   echo "    cg-cli test crud groupby"
@@ -131,9 +132,12 @@ elif [ "$cmd"x == "test"x ];then
 
    elif [  "$2"x == "crud"x ];then 
        if [ "$3"x == "one"x ];then
-           cmd=testcrudone
+            cmd=testcrudone
        elif [ "$3"x == "onemany"x ];then
-           cmd=testcrudonemany
+            cmd=testcrudonemany
+            if [ "$4"x == "x2"x ];then
+               cmd=testcrudonemanyx2
+            fi
        elif [ "$3"x == "manymany"x ];then
            cmd=testcrudmanymany
        elif [ "$3"x == "group"x ];then
@@ -156,7 +160,6 @@ fi
 
 
 ### start ###
-
 dir=$(dirname $0)
 CONFCLI=$dir/local/conf-cli
 
@@ -328,6 +331,25 @@ elif [ "$cmd"x == "testcrudonemany"x ];then
    # config crud
    $CONFCLI crud reset --save
    $CONFCLI crud add onemany $master $slave  --save
+   # config end
+
+   $CONFCLI list -t -c
+
+   ## gen crud
+   gen
+
+elif [ "$cmd"x == "testcrudonemanyx2"x ];then
+   master='cg_master_resource'
+   slave='cg_master_resource_item:master_id'
+   slave2='cg_master_resource_slave:other_id'
+
+   # config table
+   $CONFCLI table reset --save
+   $CONFCLI table add $master $slave $slave2 --save
+
+   # config crud
+   $CONFCLI crud reset --save
+   $CONFCLI crud add onemany $master $slave $slave2 --save
    # config end
 
    $CONFCLI list -t -c

@@ -394,7 +394,7 @@ sub crud_list {
 
     my @lines = split(/\n/,$data);
     foreach(@lines){
-        if(/meta/ || /xml/ || /[\$;]/){
+        if(/meta/ || /xml/ || /[\$;]$/){
             next;
         }
         print;
@@ -438,13 +438,13 @@ sub crud_add_onemany {
 
     ## get masterId from slave
     my @slaves;
-    my $masterId = undef;
+    my @ids;   ## for masterId list
+
     foreach(@slaves_mid){
         ## get masterId only at first slave
-        if(!($masterId)){
-           $masterId = $_;
-           $masterId =~ s/^\w+://;
-        }
+        my $masterId = $_;
+        $masterId =~ s/^\w+://;
+        push(@ids, $masterId);
 
         ## get slave table
         my $slave = $_;
@@ -460,11 +460,11 @@ sub crud_add_onemany {
     $hash->{mask} = 'master';
     $hash->{master} = $master;
     $hash->{slaves} = \@slaves;
-    ## get masterId from slave
-    $hash->{masterId} = $masterId;
-
+    ## join masterId together
+    $hash->{masterId} = join(';', @ids); ## join as $masterId;
 
     my $crud = &create_crud($hash);
+
     $crud = $crud->cut_root;
 
     push(@{$cruds_node->{crud}}, $crud->pointer);
@@ -551,25 +551,25 @@ sub create_crud {
            $node->{master}->content(0, $master);
         }
 
+        # CHILDREN
+        # if(exists $hash->{children}){
+        #     my @children = @{$hash->{children}};
+
+        #     my $CHILDREN = XML::Smart->new();
+
+        #     foreach(@children){
+        #         my $child_new = XML::Smart->new();
+        #         $child_new->content(0, $_);
+
+        #         push(@{$CHILDREN->{child}}, $child_new);
+        #     }
+
+        #     push(@{$node->{children}->{slave}}, $CHILDREN->nodes);
+        # }
+
         if(exists $hash->{masterId}){
             my $masterId = $hash->{masterId};
            $node->{masterId}->content(0, $masterId);
-        }
-
-        # CHILDREN
-        if(exists $hash->{children}){
-            my @children = @{$hash->{children}};
-
-            my $CHILDREN = XML::Smart->new();
-
-            foreach(@children){
-                my $child_new = XML::Smart->new();
-                $child_new->content(0, $_);
-
-                push(@{$CHILDREN->{child}}, $child_new);
-            }
-
-            push(@{$node->{children}->{slave}}, $CHILDREN->nodes);
         }
 
         # SLAVES
