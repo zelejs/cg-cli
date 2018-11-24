@@ -240,15 +240,18 @@ gen() {
 
 testinit(){
    ## copy default schema sql for crud test
-   if [ ! -e src/main/resources/sql/cg-mysql-schema.sql ];then
-      cp assets/src/main/resources/sql/cg-mysql-schema.sql src/main/resources/sql
+   if [ ! -e $dir/src/main/resources/sql/cg-mysql-schema.sql ];then
+      cp $dir/assets/src/main/resources/sql/cg-mysql-schema.sql src/main/resources/sql
    fi
-   if [ ! -e src/main/java/com/jfeat/AmApplication.java ];then
-      cp assets/src/main/java/com/jfeat/AmApplication.java src/main/java/com/jfeat
+   if [ ! -e $dir/src/main/java/com/jfeat/AmApplication.java ];then
+      cp $dir/assets/src/main/java/com/jfeat/AmApplication.java src/main/java/com/jfeat
+   fi
+   if [ ! -e $dir/pom.xml ];then
+      cp $dir/assets/pom.xml .
    fi
 
-   if [ -d src/main/java/com/jfeat/am ];then
-      rm -rf src/main/java/com/jfeat/am
+   if [ -d $dir/src/main/java/com/jfeat/am ];then
+      rm -rf $dir/src/main/java/com/jfeat/am
    fi
 }
 

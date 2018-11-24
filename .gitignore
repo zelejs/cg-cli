@@ -4,5 +4,4 @@ gen/
 .gradle/
 target/
 /src/
-pom.xml
 *.iml
