@@ -121,15 +121,8 @@ elif [ "$cmd"x == "initialize"x ];then
       exit
    fi
 elif [ "$cmd"x == "test"x ];then
-   ## check sql
-   if [ ! -d src/main/resources/sql ];then
-        mkdir -p src/main/resources/sql
-   fi
 
-   if  [ "$2"x == "init"x ];then 
-      cmd=testinit
-
-   elif [ "$2"x == "run"x ];then 
+   if [ "$2"x == "run"x ];then 
       if [ ! $3 ];then
          usage
          exit
@@ -241,9 +234,15 @@ gen() {
 testinit(){
    ## copy default schema sql for crud test
    if [ ! -e $dir/src/main/resources/sql/cg-mysql-schema.sql ];then
+      if [ ! -d $dir/src/main/resources/sql ];then
+          mkdir -p $dir/src/main/resources/sql
+      fi
       cp $dir/assets/src/main/resources/sql/cg-mysql-schema.sql src/main/resources/sql
    fi
    if [ ! -e $dir/src/main/java/com/jfeat/AmApplication.java ];then
+      if [ ! -d $dir/src/main/java/com/jfeat ];then
+          mkdir -p $dir/src/main/java/com/jfeat
+      fi
       cp $dir/assets/src/main/java/com/jfeat/AmApplication.java src/main/java/com/jfeat
    fi
    if [ ! -e $dir/pom.xml ];then
@@ -257,11 +256,12 @@ testinit(){
 
 ### main ##
 
-## check test first
+## check test init first
 if [[ $cmd == test* ]];then
     testinit
 fi
 
+## check cmd and exec
 if [ "$cmd"x == "sanity"x ];then
    sanity
 
@@ -425,9 +425,6 @@ elif [ "$cmd"x == "initialize"x ];then
    # gen persistance
    initialize
 
-elif [ "$cmd"x == "testinit"x ];then
-    testinit
-
 elif [ "$cmd"x == "testrunsql"x ];then
     schemasql=$4
 
@@ -441,9 +438,6 @@ elif [ "$cmd"x == "testrunsql"x ];then
        $dir/mysql-test/bin/mysql-test $url $schemasql
        exit  ## end
     fi
-
-    ## make sure src/main/resources/sql/*.sql exists
-    testinit
 
     ## run all sql files
     for sql in $(ls src/main/resources/sql/*.sql);do
