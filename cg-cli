@@ -247,7 +247,7 @@ testinit(){
       cp $dir/assets/src/main/java/com/jfeat/AmApplication.java src/main/java/com/jfeat
    fi
    if [ ! -e $dir/pom.xml ];then
-      cp $dir/assets/pom.xml .
+      cp $dir/assets/pom.xml $dir
    fi
 
    if [ -d $dir/src/main/java/com/jfeat/am ];then
@@ -256,6 +256,11 @@ testinit(){
 }
 
 ### main ##
+
+## check test first
+if [[ $cmd == test* ]];then
+    testinit
+fi
 
 if [ "$cmd"x == "sanity"x ];then
    sanity
