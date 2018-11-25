@@ -19,7 +19,7 @@ usage() {
   echo "    cg-cli test crud groupby"
 }
 
-## start 
+## start
 cmd=$1
 gen='-'
 if [ ! $cmd ];then
@@ -341,7 +341,7 @@ elif [ "$cmd"x == "testcrudonemany"x ];then
 elif [ "$cmd"x == "testcrudonemanyx2"x ];then
    master='cg_master_resource'
    slave='cg_master_resource_item:master_id'
-   slave2='cg_master_resource_slave:other_id'
+   slave2='cg_master_resource_record:other_id'
 
    # config table
    $CONFCLI table reset --save
