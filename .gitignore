@@ -6,3 +6,4 @@ target/
 /src/
 /pom.xml
 *.iml
+node_modules/
