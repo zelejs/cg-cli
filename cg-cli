@@ -184,7 +184,7 @@ fi
 ### start ###
 dir=$(readlink -f $0)
 dir=$(dirname $dir)
-CONFCLI=$dir/local/conf-cli
+CONFCLI="perl -I$dir/local $dir/local/conf-cli"
 
 POM=code-generator-pom.xml
 pom=$PWD/gen/$POM
@@ -229,7 +229,7 @@ config() {
         mysql_port=":$mysql_port"
     fi
     if [ "$mysql_port"x == ":3306"x ];then
-        mysql_port=/dev/null
+        mysql_port=''
     fi
     if [ ! $mysql_user ];then
         mysql_user=root
@@ -239,7 +239,7 @@ config() {
     fi
 
     #sed -i "s/<url>jdbc:mysql:\/\/[[:digit:]]\+.[[:digit:]]\+.[[:digit:]]\+.[[:digit:]]\+\/\w\+/<url>jdbc:mysql:\/\/$mysql_host$mysql_port\/$mysql_db/;s/user=\w\+/user=$mysql_user/;s/password=\w\+/password=$mysql_pw/" $pom
-    sed -i "s/<url>jdbc:mysql:\/\/[a-zA-Z0-9.]\+\/\w\+/<url>jdbc:mysql:\/\/$mysql_host$mysql_port\/$mysql_db/;s/user=\w\+/user=$mysql_user/;s/password=\w\+/password=$mysql_pw/" $pom
+    sed -i  "s/<url>jdbc:mysql:\/\/[a-zA-Z0-9.]\+\/\w\+/<url>jdbc:mysql:\/\/$mysql_host$mysql_port\/$mysql_db/;s/user=\w\+/user=$mysql_user/;s/password=\w\+/password=$mysql_pw/" $pom
 
     sanity
 }
