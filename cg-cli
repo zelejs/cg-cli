@@ -182,14 +182,15 @@ fi
 
 
 ### start ###
-dir=$(dirname $0)
+dir=$(readlink -f $0)
+dir=$(dirname $dir)
 CONFCLI=$dir/local/conf-cli
 
 POM=code-generator-pom.xml
-pom=$dir/gen/$POM
+pom=$PWD/gen/$POM
 if [ ! -e $pom ];then
-   if [ ! -d $dir/gen ];then
-       mkdir $dir/gen
+   if [ ! -d $PWD/gen ];then
+       mkdir $PWD/gen
    fi
    cp $dir/assets/$POM $pom
 fi
@@ -211,8 +212,8 @@ match_database(){
 
 ## config database
 config() {
-    if [ ! -e $dir/gen/$POM ];then
-       cp $dir/assets/$POM $dir/gen/$POM
+    if [ ! -e $PWD/gen/$POM ];then
+       cp $dir/assets/$POM $PWD/gen/$POM
     fi
     #url='<url>jdbc:mysql://127.0.0.1/test?user=root&amp;password=root&amp;characterEncoding=utf8</url>'
 
