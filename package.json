@@ -1,0 +1,14 @@
+{
+    "name": "crud-cli",
+    "version": "0.0.1",
+    "main": "cg-cli",
+    "repository": "cg cli",
+    "author": "kqd",
+    "dependencies": {
+        "commander": "^2.16.0",
+        "handlebars": "^4.0.11"
+    },
+    "bin": {
+        "cg-cli": "./cg-cli"
+    }
+}

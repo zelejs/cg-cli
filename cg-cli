@@ -2,14 +2,15 @@
 usage() {
   echo "Usage:"
   echo "    cg-cli [-h] [--help] [--gen]"
+  echo "    cg-cli config <database> [127.0.0.1] [3306] [root] [root]"
   echo "    cg-cli sanity"
   echo "    cg-cli show tables"
   echo "    cg-cli show create table <table-name>"
+  echo "    cg-cli initialize tables <table-name> [...]"
   echo "    cg-cli crud one      <master> [...]"
   echo "    cg-cli crud onemany  <master> <slave:mid> [...]"
   echo "    cg-cli crud manymany <master> <peer> <relation>"
   echo "    cg-cli crud group    <group> [groupBy] [groupId]"
-  echo "    cg-cli initialize <table> [...]"
   echo "    cg-cli test run sql [/path/to/schema.sql]"
   echo "    cg-cli test crud one"
   echo "    cg-cli test crud onemany"
@@ -38,7 +39,20 @@ for p in $@;do
    fi
 done
 
-if [ "$cmd"x == "sanity"x ];then
+if [  "$cmd"x == "config"x ];then
+   if [ ! $2 ];then
+      echo "    cg-cli config <database> [localhost] [3306] [root] [root]"
+      exit
+   fi 
+
+   if [ $5 ];then
+      if [ ! $6 ];then
+         echo "    cg-cli config $2 $3 $4 $5 [passw]"
+         exit
+      fi
+   fi 
+
+elif [ "$cmd"x == "sanity"x ];then
    echo 'ok' > /dev/null
 
 elif [ "$cmd"x == "show"x ];then
@@ -117,10 +131,18 @@ elif [ "$cmd"x == "crud"x ];then
    fi
 
 elif [ "$cmd"x == "initialize"x ];then
-   if [ ! $2 ];then
+   if [ ! $3 ];then
       usage
       exit
    fi
+
+   if [ "$2"x == "tables"x  ];then
+      cmd=initialize
+   else
+      usage
+      exit
+   fi
+
 elif [ "$cmd"x == "test"x ];then
 
    if [ "$2"x == "run"x ];then 
@@ -169,7 +191,7 @@ if [ ! -e $pom ];then
    if [ ! -d $dir/gen ];then
        mkdir $dir/gen
    fi
-   cp $dir/$POM $pom
+   cp $dir/assets/$POM $pom
 fi
 
 ## get connection string
@@ -185,6 +207,39 @@ match_database(){
    db=${db##*/}
    db=${db%%[\?]*}
    echo $db
+}
+
+## config database
+config() {
+    if [ ! -e $dir/gen/$POM ];then
+       cp $dir/assets/$POM $dir/gen/$POM
+    fi
+    #url='<url>jdbc:mysql://127.0.0.1/test?user=root&amp;password=root&amp;characterEncoding=utf8</url>'
+
+    mysql_db=$2
+    mysql_host=$3
+    mysql_port=$4
+    mysql_user=$5
+    mysql_pw=$6
+    if [ ! $mysql_host ];then
+        mysql_host='127.0.0.1'
+    fi
+    if [ $mysql_port ];then
+        mysql_port=":$mysql_port"
+    fi
+    if [ "$mysql_port"x == ":3306"x ];then
+        mysql_port=/dev/null
+    fi
+    if [ ! $mysql_user ];then
+        mysql_user=root
+    fi
+    if [ ! $mysql_pw ];then
+        mysql_pw=root
+    fi
+
+    sed -i "s/<url>jdbc:mysql:\/\/[[:digit:]]\+.[[:digit:]]\+.[[:digit:]]\+.[[:digit:]]\+\/\w\+/<url>jdbc:mysql:\/\/$mysql_host$mysql_port\/$mysql_db/;s/user=\w\+/user=$mysql_user/;s/password=\w\+/password=$mysql_pw/" $pom
+
+    sanity
 }
 
 ## sanity test for mysql
@@ -265,7 +320,10 @@ if [[ $cmd == test* ]];then
 fi
 
 ## check cmd and exec
-if [ "$cmd"x == "sanity"x ];then
+if [ "$cmd"x == "config"x ];then
+   config $@
+
+elif [ "$cmd"x == "sanity"x ];then
    sanity
 
 elif [ "$cmd"x == "showtables"x ];then
@@ -440,6 +498,8 @@ elif [ "$cmd"x == "crudgroup"x -o "$cmd"x == "testcrudgroup"x -o "$cmd"x == "tes
 
 
 elif [ "$cmd"x == "initialize"x ];then
+   shift; ## shift tables
+
    # config tables
    $CONFCLI table reset --save
    $CONFCLI table add $@ --save
