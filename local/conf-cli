@@ -350,7 +350,9 @@ sub table_add {
     foreach(@tabs_mid){
         ## get slave table
         my $tab = $_;
-        $tab =~ s/:\w+$//;
+
+        ## remove  :field$_$ 
+        $tab =~ s/:[\w+\$_]+$//;
         push(@tabs, $tab);
     }
     ## end
@@ -358,7 +360,7 @@ sub table_add {
     my $tables_node =  $XML->{project}{build}{plugins}{plugin}{configuration}{tables};
 
     foreach(@tabs){
-;        my $table_new = XML::Smart->new();
+         my $table_new = XML::Smart->new();
          $table_new->{table}->content(0, $_);
 
          push(@{$tables_node->{table}}, $table_new->nodes);
@@ -447,7 +449,10 @@ sub crud_add_onemany {
 
         ## get slave table
         my $slave = $_;
-        $slave =~ s/:\w+$//;
+
+        ## remove after : (including $_$)
+        $slave =~ s/:[\w\$_]+$//;
+
         push(@slaves, $slave);
     }
     ## end
