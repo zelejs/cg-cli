@@ -20,6 +20,14 @@ usage() {
   echo "    cg-cli test crud group"
   echo "    cg-cli test crud groupby"
 }
+usage_crud() {
+  echo "Usage:"
+  echo "    cg-cli [-h] [--help] [--gen]"
+  echo "    cg-cli crud one      <master> [...]"
+  echo "    cg-cli crud onemany  <master> <slave:mid> [...]"
+  echo "    cg-cli crud manymany <master> <peer> <relation>"
+  echo "    cg-cli crud group    <group> [groupBy] [groupId]"
+}
 
 ## start
 cmd=$1
@@ -89,7 +97,7 @@ elif [ "$cmd"x == "crud"x ];then
       
       ## check usage
       if [ ! $3 ];then
-         usage
+         usage_crud
          exit
       fi 
       ## end
@@ -101,7 +109,7 @@ elif [ "$cmd"x == "crud"x ];then
      
       ## check usage
       if [ ! $4 ];then
-         usage
+         usage_crud
          exit
       fi 
       ## end
@@ -113,7 +121,7 @@ elif [ "$cmd"x == "crud"x ];then
 
       ## check usage
       if [ ! $5 ];then
-         usage
+         usage_crud
          exit
       fi 
       ## end
@@ -125,14 +133,19 @@ elif [ "$cmd"x == "crud"x ];then
 
       ## check usage
       if [ ! $3 ];then
-         usage
+         usage_crud
          exit
       fi
+
       ## groupBy must provide groupId
       if [ $4 ];then
-         if [ ! $5 ];then
-            usage
-            exit
+         if [[ $4 == --* ]];then
+            sink=0
+         else
+            if [ ! $5 ];then
+               usage_crud
+               exit
+            fi
          fi
       fi
       ## end
