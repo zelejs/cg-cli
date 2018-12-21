@@ -11,7 +11,8 @@ usage() {
   echo "    cg-cli crud one      <master> [...]"
   echo "    cg-cli crud onemany  <master> <slave:mid> [...]"
   echo "    cg-cli crud manymany <master> <peer> <relation>"
-  echo "    cg-cli crud group    <group> [groupBy] [groupId]"
+  echo "    cg-cli crud group    <group> [...]"
+  echo "    cg-cli crud groupby  <group> <groupBy> <groupId>"
   echo "    cg-cli test run sql [/path/to/schema.sql]"
   echo "    cg-cli test crud one"
   echo "    cg-cli test crud onemany"
@@ -51,13 +52,13 @@ done
 if [  "$cmd"x == "config"x ];then
    if [ ! $2 ];then
       echo "    cg-cli config <database> [localhost] [3306] [root] [root]"
-      echo "    cg-cli config module <module-name>"
+      echo "    cg-cli config module <module-name> [parent-module]"
       exit
    fi
 
    if [ "$2"x == "module"x  ];then
       if [ ! $3 ];then
-          echo "    cg-cli config module <module-name>"
+          echo "    cg-cli config module <module-name> [parent-module]"
           exit
       fi
       cmd=configmodule
@@ -129,29 +130,36 @@ elif [ "$cmd"x == "crud"x ];then
       cmd=crudmanymany
    
    elif [ "$2"x == "group"x ];then
-       # $3-group; $4-groupBy $5-groupId
+       # $3-group; $4-group
 
       ## check usage
       if [ ! $3 ];then
          usage_crud
          exit
       fi
-
-      ## groupBy must provide groupId
-      if [ $4 ];then
-         if [[ $4 == --* ]];then
-            sink=0
-         else
-            if [ ! $5 ];then
-               usage_crud
-               exit
-            fi
-         fi
+      if [[ $3 == --* ]];then
+         usage_crud
+         exit
       fi
-      ## end
 
       cmd=crudgroup
    fi
+
+elif [ "$2"x == "groupby"x ];then
+       # $3-group; $4-groupBy $5-groupId
+
+      ## check usage
+      if [ ! $5 ];then
+         usage_crud
+         exit
+      fi
+
+      if [[ $5 == --* ]];then
+         usage_crud
+         exit
+      fi
+
+      cmd=crudgroupby
 
 elif [ "$cmd"x == "initialize"x ];then
    if [ ! $3 ];then
@@ -342,15 +350,15 @@ showcreatetable() {
 
 initialize() {
    if [ "$gen"x == "--gen"x ];then
-      echo "mvn -Dinit=true com.jfeat:sb-code-generator:1.3.0:generate -f $pom"
-      mvn -Dinit=true com.jfeat:sb-code-generator:1.3.0:generate -f $pom
+      echo "mvn -Dinit=true com.jfeat:sb-code-generator:1.3.1:generate -f $pom"
+      mvn -Dinit=true com.jfeat:sb-code-generator:1.3.1:generate -f $pom
    fi
 }
 
 gen() {
    if [ "$gen"x == "--gen"x ];then
-      echo "mvn com.jfeat:sb-code-generator:1.3.0:generate -f $pom"
-      mvn com.jfeat:sb-code-generator:1.3.0:generate -f $pom
+      echo "mvn com.jfeat:sb-code-generator:1.3.1:generate -f $pom"
+      mvn com.jfeat:sb-code-generator:1.3.1:generate -f $pom
    fi
 }
 
@@ -513,37 +521,33 @@ elif [ "$cmd"x == "crudmanymany"x -o "$cmd"x == "testcrudmanymany"x ];then
    ## gen crud
    gen
 
-elif [ "$cmd"x == "crudgroup"x -o "$cmd"x == "testcrudgroup"x -o "$cmd"x == "testcrudgroupby"x ];then
+elif [ "$cmd"x == "crudgroup"x -o "$cmd"x == "crudgroupby"x -o "$cmd"x == "testcrudgroup"x -o "$cmd"x == "testcrudgroupby"x ];then
 
    if [ "$cmd"x == "crudgroup"x ];then
-      group=$3;
-
-      ## 因maven插件限制，group 与  groupby 需要分两次测试
 
       ## skip --gen
-      if [[ $4 == --* ]];then
-         sink=0
-      elif [ $4 ];then
-         groupBy=$4;
-         groupId=$5;
+      for group in $@;do
+         if [[ $group == --* ]];then
+            continue
+         fi
 
-         cmd="crudgroupby"
-      fi
+         # config table
+         $CONFCLI table reset --save
+         $CONFCLI table add $group --save
+         # config crud
+         $CONFCLI crud reset --save
+         $CONFCLI crud add group $group --save
+         # config end
+
+         $CONFCLI list -t -c
+         ## gen crud
+         gen
+      done
+
 
    elif [ "$cmd"x == "testcrudgroup"x ];then
-       group='cg_master_resource_category'
 
-   elif [ "$cmd"x == "testcrudgroupby"x ];then
-       group='cg_master_resource_category'
-       groupBy='cg_master_resource'
-       groupId='category_id'
-   fi
-
-
-   ## gen group first step
-
-   if [ "$cmd"x == "crudgroup"x -o "$cmd"x == "crudgroupby"x -o "$cmd"x == "testcrudgroup"x ];then
-      echo why $cmd $group $groupBy
+      group='cg_master_resource_category'
 
       # config table
       $CONFCLI table reset --save
@@ -557,12 +561,37 @@ elif [ "$cmd"x == "crudgroup"x -o "$cmd"x == "testcrudgroup"x -o "$cmd"x == "tes
       ## gen crud
       gen
 
-   fi
-
-
    ## gen groupby second step
-   if [ "$cmd"x == "crudgroupby"x -o "$cmd"x == "testcrudgroupby"x ];then
-      echo why $cmd $group $groupBy
+   elif [ "$cmd"x == "crudgroupby"x -o "$cmd"x == "testcrudgroupby"x ];then
+
+      if [ "$cmd"x == "crudgroupby"x ];then
+         group=$3;
+         groupBy=$4;
+         groupId=$5;
+
+      elif [ "$cmd"x == "testcrudgroupby"x ];then
+         group='cg_master_resource_category'
+         groupBy='cg_master_resource'
+         groupId='category_id'
+      fi
+
+     
+      ### gen group as first step
+
+      # config table
+      $CONFCLI table reset --save
+      $CONFCLI table add $group --save
+      # config crud
+      $CONFCLI crud reset --save
+      $CONFCLI crud add group $group --save
+      # config end
+
+      $CONFCLI list -t -c
+      ## gen crud
+      gen
+
+
+      ### gen groupby as second step
 
        # config table
       $CONFCLI table reset --save
