@@ -412,6 +412,10 @@ elif [ "$cmd"x == "crudone"x -o "$cmd"x == "testcrudone"x ];then
    shift; ## shift one
 
    for master in $@;do
+
+      if [[ $master == --* ]];then
+         continue
+      fi
  
       # config table
       $CONFCLI table reset --save
@@ -446,6 +450,7 @@ elif [ "$cmd"x == "crudonemany"x ];then
    $CONFCLI list -t -c
    ## gen crud
    gen
+
 elif [ "$cmd"x == "testcrudonemany"x ];then
    master='cg_master_resource'
    slave='cg_master_resource_item:master_id'
@@ -514,7 +519,11 @@ elif [ "$cmd"x == "crudgroup"x -o "$cmd"x == "testcrudgroup"x -o "$cmd"x == "tes
       group=$3;
 
       ## 因maven插件限制，group 与  groupby 需要分两次测试
-      if [ $4 ];then
+
+      ## skip --gen
+      if [[ $4 == --* ]];then
+         sink=0
+      elif [ $4 ];then
          groupBy=$4;
          groupId=$5;
 
@@ -534,6 +543,7 @@ elif [ "$cmd"x == "crudgroup"x -o "$cmd"x == "testcrudgroup"x -o "$cmd"x == "tes
    ## gen group first step
 
    if [ "$cmd"x == "crudgroup"x -o "$cmd"x == "crudgroupby"x -o "$cmd"x == "testcrudgroup"x ];then
+      echo why $cmd $group $groupBy
 
       # config table
       $CONFCLI table reset --save
@@ -546,11 +556,14 @@ elif [ "$cmd"x == "crudgroup"x -o "$cmd"x == "testcrudgroup"x -o "$cmd"x == "tes
       $CONFCLI list -t -c
       ## gen crud
       gen
+
    fi
 
 
    ## gen groupby second step
    if [ "$cmd"x == "crudgroupby"x -o "$cmd"x == "testcrudgroupby"x ];then
+      echo why $cmd $group $groupBy
+
        # config table
       $CONFCLI table reset --save
       $CONFCLI table add $groupBy --save
