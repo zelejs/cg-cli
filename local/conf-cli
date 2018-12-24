@@ -178,9 +178,12 @@ my $XML = XML::Smart->new($pom);
 ## 
 if($domain =~ /^list$/){
     foreach(@ARGV){
-        if(/-t/){
-            &table_list;
-        }
+
+        ## do not need to config table, due to code-generator enhanced.        
+        #if(/-t/){
+        #    &table_list;
+        #}
+
         if(/-c/){
             &crud_list;
         }
@@ -201,10 +204,11 @@ elsif($domain =~ /^table$/){
        }
        ## skip end
 
-       &table_add(\@tabs);
-       if($list){
-           &table_list;
-       }
+       ## do not need to config tables, code-generator enhanced.
+       # &table_add(\@tabs);
+       # if($list){
+       #     &table_list;
+       # }
        
     }elsif ($cmd =~ /reset/){
        &table_reset();

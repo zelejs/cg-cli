@@ -419,25 +419,39 @@ elif [ "$cmd"x == "crudone"x -o "$cmd"x == "testcrudone"x ];then
    shift; ## shift crud
    shift; ## shift one
 
-   for master in $@;do
+   # for master in $@;do
 
+   #    if [[ $master == --* ]];then
+   #       continue
+   #    fi
+ 
+   #    # config table
+   #    $CONFCLI table reset --save
+   #    $CONFCLI table add $master --save
+   #    # config crud
+   #    $CONFCLI crud reset --save
+   #    $CONFCLI crud add one $master --save
+   #    # config end
+
+   #    $CONFCLI list -t -c
+   #    ## gen crud
+   #    gen
+
+   # done
+
+   $CONFCLI crud reset --save
+   for master in $@;do
       if [[ $master == --* ]];then
          continue
       fi
  
-      # config table
-      $CONFCLI table reset --save
-      $CONFCLI table add $master --save
-      # config crud
-      $CONFCLI crud reset --save
       $CONFCLI crud add one $master --save
-      # config end
-
-      $CONFCLI list -t -c
-      ## gen crud
-      gen
-
    done
+   
+   $CONFCLI list -t -c
+   ## gen crud
+   gen
+
 
 elif [ "$cmd"x == "crudonemany"x ];then
    master=$3; 
@@ -447,8 +461,18 @@ elif [ "$cmd"x == "crudonemany"x ];then
    shift; ## shift master
 
    # config table
-   $CONFCLI table reset --save
-   $CONFCLI table add $master $@ --save
+   # $CONFCLI table reset --save
+   # $CONFCLI table add $master $@ --save
+
+   ## gen slaves first
+   $CONFCLI crud reset --save
+   $CONFCLI crud add one $@ --save
+   # config end
+
+   $CONFCLI list -t -c
+   ## gen crud
+   gen
+
 
    # config crud
    $CONFCLI crud reset --save
@@ -462,10 +486,21 @@ elif [ "$cmd"x == "crudonemany"x ];then
 elif [ "$cmd"x == "testcrudonemany"x ];then
    master='cg_master_resource'
    slave='cg_master_resource_item:master_id'
+   slave_master='cg_master_resource_item'
 
    # config table
-   $CONFCLI table reset --save
-   $CONFCLI table add $master $slave --save
+   #$CONFCLI table reset --save
+   #$CONFCLI table add $master $slave --save
+
+   ## gen slave master first
+   $CONFCLI crud reset --save
+   $CONFCLI crud add one $slave_master  --save
+
+   $CONFCLI list -t -c
+
+   ## gen crud
+   gen
+
 
    # config crud
    $CONFCLI crud reset --save
@@ -481,10 +516,22 @@ elif [ "$cmd"x == "testcrudonemanyx2"x ];then
    master='cg_master_resource'
    slave='cg_master_resource_item:master_id'
    slave2='cg_master_resource_record:other_id'
+   slave_master='cg_master_resource_item'
+   slave2_master='cg_master_resource_record'
+
+   ## gen slave master first
+   $CONFCLI crud reset --save
+   $CONFCLI crud add one $slave_master $slave2_master --save
+
+   $CONFCLI list -t -c
+
+   ## gen crud
+   gen
+
 
    # config table
-   $CONFCLI table reset --save
-   $CONFCLI table add $master $slave $slave2 --save
+   #$CONFCLI table reset --save
+   #$CONFCLI table add $master $slave $slave2 --save
 
    # config crud
    $CONFCLI crud reset --save
