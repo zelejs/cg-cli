@@ -657,6 +657,8 @@ elif [ "$cmd"x == "crudone"x -o "$cmd"x == "testcrudone"x ];then
 
    # done
 
+   # config table
+   $CONFCLI table reset --save
    $CONFCLI crud reset --save
    for master in $@;do
       if [[ $master == --* ]];then
