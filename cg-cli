@@ -2,8 +2,8 @@
 usage() {
   echo "Usage:"
   echo "    cg-cli [OPTIONS] -h --help --gen"
-  echo "    cg-cli pom get module"
-  echo "    cg-cli pom set module <module-name> [parent-module]"
+  echo "    cg-cli module get"
+  echo "    cg-cli module set <module-name> [parent-module]"
   echo "    cg-cli db get config"
   echo "    cg-cli db set config <database> [localhost] [3306] [root] [root]"
   echo "    cg-cli db sanity"
@@ -11,23 +11,17 @@ usage() {
   echo "    cg-cli db show tables"
   echo "    cg-cli db show create table <table-name>"
   echo "    cg-cli crud one      <master> [...]"
-  echo "    cg-cli crud onemany  <master> --slave <slave> <mid> [wid] [...]"
+  echo "    cg-cli crud onemany  <master> <slave:mid:id> [...]"
   echo "    cg-cli crud manymany <master> <peer> <relation>"
   echo "    cg-cli crud group    <group> [...]"
   echo "    cg-cli crud groupby  <group> <groupBy> <groupId>"
-  echo "    cg-cli crud initialize table <table-name> [...]"
+  echo "    cg-cli crud init table <table-name> [...]"
   echo "    cg-cli test crud one"
   echo "    cg-cli test crud onemany"
   echo "    cg-cli test crud onemany x2"
   echo "    cg-cli test crud manymany"
   echo "    cg-cli test crud group"
   echo "    cg-cli test crud groupby"
-  echo "    cg-cli cruds dsl show"
-  echo "    cg-cli cruds dsl add one <master> [...]"
-  echo "    cg-cli cruds dsl add onemany <master> --slave <slave> <mid> [wid] [...]"
-  echo "    cg-cli cruds dsl add manymany <master> <peer> <relation>"
-  echo "    cg-cli cruds dsl add group <group> [groupBy] [groupId]"
-  echo "    cg-cli cruds dsl run -f <crud-config>"
 }
 
 usage_db() {
@@ -44,10 +38,10 @@ usage_crud() {
   echo "Usage:"
   echo "    cg-cli [OPTIONS] -h --help --gen"
   echo "    cg-cli crud one      <master> [...]"
-  echo "    cg-cli crud onemany  <master> <slave:mid> [...]"
+  echo "    cg-cli crud onemany  <master> <slave:mid:id> [...]"
   echo "    cg-cli crud manymany <master> <peer> <relation>"
   echo "    cg-cli crud group    <group> [groupBy] [groupId]"
-  echo "    cg-cli crud initialize tables <table-name> [...]"
+  echo "    cg-cli crud init tables <table-name> [...]"
 }
 usage_test() {
   echo "Usage:"
@@ -60,17 +54,6 @@ usage_test() {
   echo "    cg-cli test crud group"
   echo "    cg-cli test crud groupby"
 }
-usage_cruds() {
-  echo "Usage:"
-  echo "    cg-cli [OPTIONS] -h --help --gen"
-  echo "    cg-cli cruds dsl show"
-  echo "    cg-cli cruds dsl add one <master> [...]"
-  echo "    cg-cli cruds dsl add onemany <master> --slave <slave> <mid> [wid] [...]"
-  echo "    cg-cli cruds dsl add manymany <master> <peer> <relation>"
-  echo "    cg-cli cruds dsl add group <group> [groupBy] [groupId]"
-  echo "    cg-cli cruds dsl run -f <crud-config>"
-}
-
 
 ## start
 cmd=$1
@@ -92,33 +75,24 @@ for p in $@;do
 done
 
 
-if [  "$cmd"x == "pom"x ];then
+if [  "$cmd"x == "module"x ];then
    subcmd=$2
 
    if [ ! $subcmd ];then
-      echo "    cg-cli pom get module"
-      echo "    cg-cli pom set module <module-name> [parent-module]"
+      echo "    cg-cli module get"
+      echo "    cg-cli module set <module-name> [parent-module]"
       exit
    fi
 
    if [ "$subcmd"x == "get"x  ];then
-      if [[ ! $3 == module ]];then
-          echo "    cg-cli pom get module"
-          exit
-      fi
-      cmd=pomgetmodule
-   fi
+      cmd=moduleget
 
-   if [ "$subcmd"x == "set"x  ];then
-      if [ ! $3 == module ];then
-          echo "    cg-cli pom set module <module-name> [parent-module]"
+   elif [ "$subcmd"x == "set"x  ];then
+      if [[ ! $3 ]];then
+          echo "    cg-cli module set <module-name> [parent-module]"
           exit
       fi
-      if [ ! $4 ];then
-          echo "    cg-cli pom set module <module-name> [parent-module]"
-          exit
-      fi
-      cmd=pomsetmodule
+      cmd=moduleset
    fi
 
 elif [ "$cmd"x == "db"x  ];then
@@ -246,13 +220,13 @@ elif [ "$cmd"x == "crud"x ];then
 
       cmd=crudgroupby
 
-   elif [ "$subcmd"x == "initialize"x ];then
+   elif [ "$subcmd"x == "init"x ];then
       if [[ ! $3 == table ]];then
-         echo "    cg-cli crud initialize table <table-name> [...]"
+         echo "    cg-cli crud init table <table-name> [...]"
          exit
       fi
       if [ ! $4 ];then
-         echo "    cg-cli crud initialize table <table-name> [...]"
+         echo "    cg-cli crud init table <table-name> [...]"
          exit
       fi
       cmd=crudinitializetable
@@ -393,19 +367,23 @@ match_database(){
    echo $db
 }
 
-pomgetmodule(){
+moduleget(){
    grep moduleName gen/$POM | grep -v '\$'
    grep parentPackage gen/$POM | grep -v '\$'
 }
 
-pomsetmodule() {
+moduleset() {
     if [ ! -e gen/$POM ];then
        cp $dir/assets/$POM gen/$POM
     fi
 
-   #<moduleName>test</moduleName>
-   module_name=$4  ## test
-   parent_module=$5 ## module
+   #<moduleName>cg</moduleName>
+   module_name=$3    ## cg
+   parent_module=$4  ## module
+
+   if [ ! $parent_module ];then
+       parent_module=module
+   fi
 
    uname=$(uname)
 
@@ -414,14 +392,14 @@ pomsetmodule() {
       if [ $parent_module ];then
            sed -i "" "s/<parentPackage>[a-zA-Z]*<\/parentPackage>/<parentPackage>$parent_module<\/parentPackage>/" $pom
       fi
-   else  
+   else
       sed -i  "s/<moduleName>[a-zA-Z]\+<\/moduleName>/<moduleName>$module_name<\/moduleName>/" $pom
       if [ $parent_module ];then
            sed -i  "s/<parentPackage>[a-zA-Z]\+<\/parentPackage>/<parentPackage>$parent_module<\/parentPackage>/" $pom
       fi
    fi
 
-   pomgetmodule
+   moduleget
 }
 
 dbgetconfig(){
@@ -536,8 +514,6 @@ crudinitializetable() {
    fi
 }
 
-
-
 testinit(){
    ## copy default schema sql for crud test
    if [ ! -e $dir/src/main/resources/sql/cg-mysql-schema.sql ];then
@@ -561,38 +537,14 @@ testinit(){
    fi
 }
 
-crudsdslshow() {
-   echo
-}
-
-crudsdsladdone() {
-   echo
-}
-
-crudsdsladdonemany() {
-   echo
-}
-
-crudsdsladdmanymany() {
-   echo
-}
-
-crudsdsladdgroup() {
-   echo
-}
-
-crudsdslrun() {
-   echo
-}
-
-
-
 gen() {
    if [ "$gen"x == "--gen"x ];then
       echo "mvn com.jfeat:sb-code-generator:1.3.1:generate -f $pom"
       mvn com.jfeat:sb-code-generator:1.3.1:generate -f $pom
    fi
 }
+
+
 ### main ##
 
 ## check test init first
@@ -601,11 +553,11 @@ if [[ $cmd == test* ]];then
 fi
 
 ## check cmd and exec
-if [ "$cmd"x == "pomgetmodule"x ];then
-   pomgetmodule
+if [ "$cmd"x == "moduleget"x ];then
+   moduleget
 
-elif [ "$cmd"x == "pomsetmodule"x ];then
-   pomsetmodule $@
+elif [ "$cmd"x == "moduleset"x ];then
+   moduleset $@
 
 elif [ "$cmd"x == "dbgetconfig"x ];then
    dbgetconfig $@
@@ -684,16 +636,6 @@ elif [ "$cmd"x == "crudonemany"x ];then
    $CONFCLI table reset --save
    # $CONFCLI table add $master $@ --save
 
-   ## gen slaves first
-   $CONFCLI crud reset --save
-   $CONFCLI crud add one $@ --save
-   # config end
-
-   $CONFCLI list -t -c
-   ## gen crud
-   gen
-
-
    # config crud
    $CONFCLI crud reset --save
    $CONFCLI crud add onemany $master $@ --save
@@ -712,16 +654,6 @@ elif [ "$cmd"x == "testcrudonemany"x ];then
    $CONFCLI table reset --save
    #$CONFCLI table add $master $slave --save
 
-   ## gen slave master first
-   $CONFCLI crud reset --save
-   $CONFCLI crud add one $slave_master  --save
-
-   $CONFCLI list -t -c
-
-   ## gen crud
-   gen
-
-
    # config crud
    $CONFCLI crud reset --save
    $CONFCLI crud add onemany $master $slave  --save
@@ -738,16 +670,6 @@ elif [ "$cmd"x == "testcrudonemanyx2"x ];then
    slave2='cg_master_resource_record:other_id'
    slave_master='cg_master_resource_item'
    slave2_master='cg_master_resource_record'
-
-   ## gen slave master first
-   $CONFCLI crud reset --save
-   $CONFCLI crud add one $slave_master $slave2_master --save
-
-   $CONFCLI list -t -c
-
-   ## gen crud
-   gen
-
 
    # config table
    $CONFCLI table reset --save
@@ -895,41 +817,6 @@ elif [ "$cmd"x == "crudinitializetable"x ];then
 
    # gen persistance
    crudinitializetable
-
-elif [ "$cmd"x == "crudsdslshow"x ];then
-    crudsdslshow
-
-elif [ "$cmd"x == "crudsdsladdone"x ];then
-    shift #shift cruds
-    shift #shift dsl
-    shift #shift add
-    shift #shift one
-    crudsdsladdone $@
-
-elif [ "$cmd"x == "crudsdsladdonemany"x ];then
-    shift #shift cruds
-    shift #shift dsl
-    shift #shift add
-    shift #shift onemany
-    crudsdsladdonemany $@
-
-elif [ "$cmd"x == "crudsdsladdmanymany"x ];then
-    shift #shift cruds
-    shift #shift dsl
-    shift #shift add
-    shift #shift manymany
-    crudsdsladdmanymany $@
-
-elif [ "$cmd"x == "crudsdsladdgroup"x ];then
-    shift #shift cruds
-    shift #shift dsl
-    shift #shift add
-    shift #shift group
-    crudsdsladdmanymany $@
-
-elif [ "$cmd"x == "crudsdslrun"x ];then
-    dsl=$5
-    crudsdslrun $dsl
 
 else
     usage
