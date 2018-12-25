@@ -2,11 +2,12 @@
 usage() {
   echo "Usage:"
   echo "    cg-cli [OPTIONS] -h --help --gen"
-  echo "    "
   echo "    cg-cli pom get module"
   echo "    cg-cli pom set module <module-name> [parent-module]"
-  echo "    cg-cli db config <database> [localhost] [3306] [root] [root]"
+  echo "    cg-cli db get config"
+  echo "    cg-cli db set config <database> [localhost] [3306] [root] [root]"
   echo "    cg-cli db sanity"
+  echo "    cg-cli db run sql [/path/to/schema.sql]"
   echo "    cg-cli db show tables"
   echo "    cg-cli db show create table <table-name>"
   echo "    cg-cli crud one      <master> [...]"
@@ -15,18 +16,29 @@ usage() {
   echo "    cg-cli crud group    <group> [...]"
   echo "    cg-cli crud groupby  <group> <groupBy> <groupId>"
   echo "    cg-cli crud initialize table <table-name> [...]"
-  echo "    cg-cli test run sql [/path/to/schema.sql]"
   echo "    cg-cli test crud one"
   echo "    cg-cli test crud onemany"
   echo "    cg-cli test crud onemany x2"
   echo "    cg-cli test crud manymany"
   echo "    cg-cli test crud group"
   echo "    cg-cli test crud groupby"
-  echo "    cg-cli cruds config add one <master> [...]"
-  echo "    cg-cli cruds config add onemany <master> --slave <slave> <mid> [wid] [...]"
-  echo "    cg-cli cruds config add manymany <master> <peer> <relation>"
-  echo "    cg-cli cruds config add group <group> [groupBy] [groupId]"
-  echo "    cg-cli cruds -f <crud-config>"
+  echo "    cg-cli cruds dsl show"
+  echo "    cg-cli cruds dsl add one <master> [...]"
+  echo "    cg-cli cruds dsl add onemany <master> --slave <slave> <mid> [wid] [...]"
+  echo "    cg-cli cruds dsl add manymany <master> <peer> <relation>"
+  echo "    cg-cli cruds dsl add group <group> [groupBy] [groupId]"
+  echo "    cg-cli cruds dsl run -f <crud-config>"
+}
+
+usage_db() {
+  echo "Usage:"
+  echo "    cg-cli [OPTIONS] -h --help --gen"
+  echo "    cg-cli db get config"
+  echo "    cg-cli db set config <database> [localhost] [3306] [root] [root]"
+  echo "    cg-cli db sanity"
+  echo "    cg-cli db run sql [/path/to/schema.sql]"
+  echo "    cg-cli db show tables"
+  echo "    cg-cli db show create table <table-name>"
 }
 usage_crud() {
   echo "Usage:"
@@ -51,11 +63,12 @@ usage_test() {
 usage_cruds() {
   echo "Usage:"
   echo "    cg-cli [OPTIONS] -h --help --gen"
-  echo "    cg-cli cruds config add one <master> [...]"
-  echo "    cg-cli cruds config add onemany <master> --slave <slave> <mid> [wid] [...]"
-  echo "    cg-cli cruds config add manymany <master> <peer> <relation>"
-  echo "    cg-cli cruds config add group <group> [groupBy] [groupId]"
-  echo "    cg-cli cruds -f <crud-config>"
+  echo "    cg-cli cruds dsl show"
+  echo "    cg-cli cruds dsl add one <master> [...]"
+  echo "    cg-cli cruds dsl add onemany <master> --slave <slave> <mid> [wid] [...]"
+  echo "    cg-cli cruds dsl add manymany <master> <peer> <relation>"
+  echo "    cg-cli cruds dsl add group <group> [groupBy] [groupId]"
+  echo "    cg-cli cruds dsl run -f <crud-config>"
 }
 
 
@@ -78,52 +91,96 @@ for p in $@;do
    fi
 done
 
-if [  "$cmd"x == "config"x ];then
-   if [ ! $2 ];then
-      echo "    cg-cli config <database> [localhost] [3306] [root] [root]"
-      echo "    cg-cli config module <module-name> [parent-module]"
+
+if [  "$cmd"x == "pom"x ];then
+   subcmd=$2
+
+   if [ ! $subcmd ];then
+      echo "    cg-cli pom get module"
+      echo "    cg-cli pom set module <module-name> [parent-module]"
       exit
    fi
 
-   if [ "$2"x == "module"x  ];then
-      if [ ! $3 ];then
-          echo "    cg-cli config module <module-name> [parent-module]"
+   if [ "$subcmd"x == "get"x  ];then
+      if [[ ! $3 == module ]];then
+          echo "    cg-cli pom get module"
           exit
       fi
-      cmd=configmodule
+      cmd=pomgetmodule
    fi
 
-   if [ $5 ];then
-      if [ ! $6 ];then
-         echo "    cg-cli config $2 $3 $4 $5 [passw]"
+   if [ "$subcmd"x == "set"x  ];then
+      if [ ! $3 == module ];then
+          echo "    cg-cli pom set module <module-name> [parent-module]"
+          exit
+      fi
+      if [ ! $4 ];then
+          echo "    cg-cli pom set module <module-name> [parent-module]"
+          exit
+      fi
+      cmd=pomsetmodule
+   fi
+
+elif [ "$cmd"x == "db"x  ];then
+   subcmd=$2$3
+
+   if [ "$subcmd"x == "getconfig"x ];then
+      cmd=dbgetconfig
+
+   elif [ "$subcmd"x == "setconfig"x ];then
+      ## $4  database
+      ## $5  host
+      ## $6  port
+      ## $7  user
+      ## $8  passw
+      if [ ! $4 ];then
+         usage_db
          exit
       fi
-   fi 
 
-elif [ "$cmd"x == "sanity"x ];then
-   echo 'ok' > /dev/null
+      if [ $7 ];then
+         if [ ! $8 ];then
+            echo "    cg-cli db set config $4 $5 $6 $7 [passw]"
+            exit
+         fi
+      fi
+      cmd=dbsetconfig
 
-elif [ "$cmd"x == "show"x ];then
-   if [ "$2"x == "tables"x ];then
-      cmd=showtables
+   elif [ "$subcmd"x == "sanity"x ];then
+      cmd=dbsanity
 
-   elif [ "$2"x == "create"x -a "$3"x == "table"x ];then
+   elif [ "$subcmd"x == "runsql"x ];then
+      cmd=dbrunsql
 
-      ## check usage
-      if [ ! $4 ];then
-         usage
+   elif [ "$subcmd"x == "showtables"x ];then
+         cmd=dbshowtables
+   
+   elif [ "$subcmd"x == "showcreate"x ];then
+      if [ "$4"x == "table"x ];then
+
+         ## check usage
+         if [ ! $5 ];then
+            #usage_db
+            echo "    cg-cli db show create table <table-name>"
+            exit
+         fi 
+         ## end
+
+         cmd=dbshowcreatetable
+      else
+         echo "    cg-cli db show create table <table-name>"
          exit
-      fi 
-      ## end
+      fi
 
-      cmd=showcreatetable
-   else
-       usage
-       exit
+   else 
+         usage_db
+         exit
    fi
 
 elif [ "$cmd"x == "crud"x ];then
-   if [ "$2"x == "one"x ];then
+   subcmd=$2
+    
+   if [ "$subcmd"x == "one"x ];then
       
       ## check usage
       if [ ! $3 ];then
@@ -134,7 +191,7 @@ elif [ "$cmd"x == "crud"x ];then
 
       cmd=crudone
 
-   elif [ "$2"x == "onemany"x ];then
+   elif [ "$subcmd"x == "onemany"x ];then
       # $3-master; $4-slave:mid
      
       ## check usage
@@ -146,7 +203,7 @@ elif [ "$cmd"x == "crud"x ];then
 
       cmd=crudonemany
 
-   elif [ "$2"x == "manymany"x ];then
+   elif [ "$subcmd"x == "manymany"x ];then
        # $3-master; $4-peer, $5-relation
 
       ## check usage
@@ -158,7 +215,7 @@ elif [ "$cmd"x == "crud"x ];then
 
       cmd=crudmanymany
    
-   elif [ "$2"x == "group"x ];then
+   elif [ "$subcmd"x == "group"x ];then
        # $3-group; $4-group
 
       ## check usage
@@ -172,9 +229,8 @@ elif [ "$cmd"x == "crud"x ];then
       fi
 
       cmd=crudgroup
-   fi
 
-elif [ "$2"x == "groupby"x ];then
+   elif [ "$subcmd"x == "groupby"x ];then
        # $3-group; $4-groupBy $5-groupId
 
       ## check usage
@@ -190,17 +246,19 @@ elif [ "$2"x == "groupby"x ];then
 
       cmd=crudgroupby
 
-elif [ "$cmd"x == "initialize"x ];then
-   if [ ! $3 ];then
-      usage
-      exit
-   fi
-
-   if [ "$2"x == "tables"x  ];then
-      cmd=initialize
+   elif [ "$subcmd"x == "initialize"x ];then
+      if [[ ! $3 == table ]];then
+         echo "    cg-cli crud initialize table <table-name> [...]"
+         exit
+      fi
+      if [ ! $4 ];then
+         echo "    cg-cli crud initialize table <table-name> [...]"
+         exit
+      fi
+      cmd=crudinitializetable
    else
-      usage
-      exit
+       usage_crud
+       exit
    fi
 
 elif [ "$cmd"x == "test"x ];then
@@ -234,18 +292,71 @@ elif [ "$cmd"x == "test"x ];then
       usage
       exit
    fi
+   
 elif [ "$cmd"x == "cruds"x ];then
-   if [[ ! $2 == -f ]];then
-       usage
+   ## cg-cli cruds dsl
+   if [[ ! $2 == dsl ]];then
+       usage_cruds
        exit
    fi
-   if [ ! $3 ];then
-       echo "    cg-cli cruds -f <crud-config>"
+
+   subcmd=$3
+
+   ## cg-cli cruds dsl show
+   if [[ $subcmd == show ]];then
+      cmd=crudsdslshow
+
+
+   ## cg-cli cruds dsl add 
+   elif [[ $subcmd == add ]];then
+      subcmd=$4
+
+      if [[ $subcmd == one ]];then
+         if [ ! $5 ];then
+            usage_cruds
+            exit
+         fi
+         cmd=crudsdsladdone
+
+      elif [[ $subcmd == onemany ]];then
+         ## TODO, check --slave
+         cmd=crudsdsladdonemany
+
+      elif [[ $subcmd == manymany ]];then
+         if [ ! $7 ];then
+            usage_cruds
+            exit
+         fi
+         cmd=crudsdsladdmanymany
+
+      elif [[ $subcmd == group ]];then
+         if [ ! $5 ];then
+            usage_cruds
+            exit
+         fi
+         cmd=crudsdsladdgroup
+
+      else
+          usage_cruds
+          exit
+      fi
+
+   ## cg-cli cruds dsl run -f <crud-config>
+   elif [[ $subcmd == run ]];then
+      if [[ ! $4 == -f ]];then
+         echo "    cg-cli cruds dsl run -f <crud-config>"
+         exit
+      fi
+      if [ ! -e $5 ];then
+         echo "    cg-cli cruds dsl run -f <crud-config>"
+         echo fatal: cruds config file $3 not exists
+         exit
+      fi
+      cmd=crudsdslrun
+
+   else 
+       usage_cruds
        exit
-   fi
-   if [ ! -e $3 ];then
-      echo fatal: cruds config file $3 not exists
-      exit
    fi
 else
     usage
@@ -282,18 +393,55 @@ match_database(){
    echo $db
 }
 
+pomgetmodule(){
+   grep moduleName gen/$POM | grep -v '\$'
+   grep parentPackage gen/$POM | grep -v '\$'
+}
+
+pomsetmodule() {
+    if [ ! -e gen/$POM ];then
+       cp $dir/assets/$POM gen/$POM
+    fi
+
+   #<moduleName>test</moduleName>
+   module_name=$4  ## test
+   parent_module=$5 ## module
+
+   uname=$(uname)
+
+   if [ "$uname"x == "Darwin"x ];then
+      sed -i "" "s/<moduleName>[a-zA-Z]*<\/moduleName>/<moduleName>$module_name<\/moduleName>/" $pom
+      if [ $parent_module ];then
+           sed -i "" "s/<parentPackage>[a-zA-Z]*<\/parentPackage>/<parentPackage>$parent_module<\/parentPackage>/" $pom
+      fi
+   else  
+      sed -i  "s/<moduleName>[a-zA-Z]\+<\/moduleName>/<moduleName>$module_name<\/moduleName>/" $pom
+      if [ $parent_module ];then
+           sed -i  "s/<parentPackage>[a-zA-Z]\+<\/parentPackage>/<parentPackage>$parent_module<\/parentPackage>/" $pom
+      fi
+   fi
+
+   pomgetmodule
+}
+
+dbgetconfig(){
+    #grep dbUrl gen/$POM | grep -v '\$'
+    grep '\<url\>' gen/$POM | grep -v '\$'
+}
+
 ## config database
-config() {
+dbsetconfig() {
     if [ ! -e gen/$POM ];then
        cp $dir/assets/$POM gen/$POM
     fi
     #url='<url>jdbc:mysql://127.0.0.1/test?user=root&amp;password=root&amp;characterEncoding=utf8</url>'
-
-    mysql_db=$2
-    mysql_host=$3
-    mysql_port=$4
-    mysql_user=$5
-    mysql_pw=$6
+    # set    $2
+    # config $3
+    mysql_db=$4
+    mysql_host=$5
+    mysql_port=$6
+    mysql_user=$7
+    mysql_pw=$8
     if [ ! $mysql_host ];then
         mysql_host='127.0.0.1'
     fi
@@ -311,49 +459,21 @@ config() {
     fi
     
     uname=$(uname)
-    
+
     #sed -i "s/<url>jdbc:mysql:\/\/[[:digit:]]\+.[[:digit:]]\+.[[:digit:]]\+.[[:digit:]]\+\/\w\+/<url>jdbc:mysql:\/\/$mysql_host$mysql_port\/$mysql_db/;s/user=\w\+/user=$mysql_user/;s/password=\w\+/password=$mysql_pw/" $pom
     if [ "$uname"x == "Darwin"x ];then
-        sed -i "" "s/<url>jdbc:mysql:\/\/[a-zA-Z0-9.]*\/[a-zA-Z]*/<url>jdbc:mysql:\/\/$mysql_host$mysql_port\/$mysql_db/;s/user=\[a-zA-Z]*/user=$mysql_user/;s/password=[a-zA-Z]*/password=$mysql_pw/" $pom
+        sed -i "" "s/<url>jdbc:mysql:\/\/[a-zA-Z0-9.:]*\/[a-zA-Z]*/<url>jdbc:mysql:\/\/$mysql_host$mysql_port\/$mysql_db/;s/user=[a-zA-Z]*/user=$mysql_user/;s/password=[a-zA-Z]*/password=$mysql_pw/" $pom
     else
-        sed -i "s/<url>jdbc:mysql:\/\/[a-zA-Z0-9.]\+\/\w\+/<url>jdbc:mysql:\/\/$mysql_host$mysql_port\/$mysql_db/;s/user=\w\+/user=$mysql_user/;s/password=\w\+/password=$mysql_pw/" $pom
+        sed -i "s/<url>jdbc:mysql:\/\/[a-zA-Z0-9.:]\+\/\w\+/<url>jdbc:mysql:\/\/$mysql_host$mysql_port\/$mysql_db/;s/user=\w\+/user=$mysql_user/;s/password=\w\+/password=$mysql_pw/" $pom
     fi
 
     #sanity
-    grep "<url>" gen/$POM | grep $mysql_host
+    grep "<url>" gen/$POM | grep -v '\$'
 }
 
-configmodule() {
-    if [ ! -e gen/$POM ];then
-       cp $dir/assets/$POM gen/$POM
-    fi
-
-   #<moduleName>test</moduleName>
-   module_name=$3  ## test
-   parent_module=$4 ## module
-
-   uname=$(uname)
-
-   if [ "$uname"x == "Darwin"x ];then
-      sed -i "" "s/<moduleName>[a-zA-Z]*<\/moduleName>/<moduleName>$module_name<\/moduleName>/" $pom
-      if [ $parent_module ];then
-           sed -i "" "s/<parentPackage>[a-zA-Z]*<\/parentPackage>/<parentPackage>$parent_module<\/parentPackage>/" $pom
-      fi
-   else  
-      sed -i  "s/<moduleName>[a-zA-Z]\+<\/moduleName>/<moduleName>$module_name<\/moduleName>/" $pom
-      if [ $parent_module ];then
-           sed -i  "s/<parentPackage>[a-zA-Z]\+<\/parentPackage>/<parentPackage>$parent_module<\/parentPackage>/" $pom
-      fi
-   fi
-
-   grep moduleName gen/$POM | grep $module_name
-   if [ $parent_module ];then
-       grep parentPackage gen/$POM | grep $parent_module
-   fi
-}
 
 ## sanity test for mysql
-sanity() {
+dbsanity() {
    mysql_test=$($dir/mysql-test/bin/mysql-test $url "select now()")
    if [ "$mysql_test" ];then
       echo "Connection to $url succeeded!"
@@ -362,7 +482,28 @@ sanity() {
    fi
 }
 
-showtables() {
+dbrunsql(){
+    schemasql=$1
+
+    ## if user schema sql, check exists
+    if [ $schemasql ];then
+       if [ ! -e  $schemasql ];then
+           echo "schema sql $schemasql not found!"
+           exit
+       fi
+
+       $dir/mysql-test/bin/mysql-test $url $schemasql
+       exit  ## end
+    fi
+
+    ## run all sql files
+    for sql in $(ls src/main/resources/sql/*.sql);do
+       echo $sql
+       $dir/mysql-test/bin/mysql-test $url $sql
+    done
+}
+
+dbshowtables() {
     db=$(match_database)
     sql="select TABLE_NAME from INFORMATION_SCHEMA.TABLES where TABLE_SCHEMA='$db' and TABLE_NAME <> 'schema_version'"
     for t in $($dir/mysql-test/bin/mysql-test "$url" "$sql");do
@@ -370,12 +511,11 @@ showtables() {
     done
 }
 
-showcreatetable() {
+dbshowcreatetable() {
     table=$1
     sql="show create table $table"
     result=$($dir/mysql-test/bin/mysql-test "$url" "$sql")
     #result="'tenant'|'CREATE TABLE \`tenant\` ( \`id\` bigint(20) NOT NULL, \`status\` int(11) DEFAULT NULL, \`name\` varchar(255) DEFAULT NULL, \`delete_flag\` int(11) NOT NULL DEFAULT '1', PRIMARY KEY (\`id\`)) ENGINE=InnoDB DEFAULT CHARSET=utf8'"
-
     result=${result#*[|]}
     result=${result#*[\']}
     result=${result%[\']*}
@@ -389,19 +529,14 @@ showcreatetable() {
     echo $result | tr '!' '\n'
 }
 
-initialize() {
+crudinitializetable() {
    if [ "$gen"x == "--gen"x ];then
       echo "mvn -Dinit=true com.jfeat:sb-code-generator:1.3.1:generate -f $pom"
       mvn -Dinit=true com.jfeat:sb-code-generator:1.3.1:generate -f $pom
    fi
 }
 
-gen() {
-   if [ "$gen"x == "--gen"x ];then
-      echo "mvn com.jfeat:sb-code-generator:1.3.1:generate -f $pom"
-      mvn com.jfeat:sb-code-generator:1.3.1:generate -f $pom
-   fi
-}
+
 
 testinit(){
    ## copy default schema sql for crud test
@@ -426,6 +561,39 @@ testinit(){
    fi
 }
 
+crudsdslshow(){
+
+}
+
+crudsdsladdone(){
+
+}
+
+crudsdsladdonemany(){
+
+}
+
+crudsdsladdmanymany(){
+
+}
+
+crudsdsladdgroup{
+
+}
+
+crudsdslrun(){
+
+}
+
+
+
+
+gen() {
+   if [ "$gen"x == "--gen"x ];then
+      echo "mvn com.jfeat:sb-code-generator:1.3.1:generate -f $pom"
+      mvn com.jfeat:sb-code-generator:1.3.1:generate -f $pom
+   fi
+}
 ### main ##
 
 ## check test init first
@@ -434,21 +602,31 @@ if [[ $cmd == test* ]];then
 fi
 
 ## check cmd and exec
-if [ "$cmd"x == "config"x ];then
-   config $@
+if [ "$cmd"x == "pomgetmodule"x ];then
+   pomgetmodule
 
-elif [ "$cmd"x == "configmodule"x ];then
-   configmodule $@
+elif [ "$cmd"x == "pomsetmodule"x ];then
+   pomsetmodule $@
 
-elif [ "$cmd"x == "sanity"x ];then
-   sanity
+elif [ "$cmd"x == "dbgetconfig"x ];then
+   dbgetconfig $@
 
-elif [ "$cmd"x == "showtables"x ];then
-   showtables
+elif [ "$cmd"x == "dbsetconfig"x ];then
+   dbsetconfig $@
 
-elif [ "$cmd"x == "showcreatetable"x ];then
-   tab=$4
-   showcreatetable $tab
+elif [ "$cmd"x == "dbsanity"x ];then
+   dbsanity
+
+elif [ "$cmd"x == "dbrunsql"x ];then
+    schema=$4
+    dbrunsql $schema
+
+elif [ "$cmd"x == "dbshowtables"x ];then
+   dbshowtables
+
+elif [ "$cmd"x == "dbshowcreatetable"x ];then
+   tab=$5
+   dbshowcreatetable $tab
 
 elif [ "$cmd"x == "crudone"x -o "$cmd"x == "testcrudone"x ];then
    master=$3
@@ -694,8 +872,7 @@ elif [ "$cmd"x == "crudgroup"x -o "$cmd"x == "crudgroupby"x -o "$cmd"x == "testc
       gen
    fi
 
-
-elif [ "$cmd"x == "initialize"x ];then
+elif [ "$cmd"x == "crudinitializetable"x ];then
    shift; ## shift config
    shift; ## shift tables
 
@@ -711,27 +888,42 @@ elif [ "$cmd"x == "initialize"x ];then
    $CONFCLI list -t -c
 
    # gen persistance
-   initialize
+   crudinitializetable
 
-elif [ "$cmd"x == "testrunsql"x ];then
-    schemasql=$4
+elif [ "$cmd"x == "crudsdslshow"x ];then
+    crudsdslshow
 
-    ## if user schema sql, check exists
-    if [ $schemasql ];then
-       if [ ! -e  $schemasql ];then
-           echo "schema sql $schemasql not found!"
-           exit
-       fi
+elif [ "$cmd"x == "crudsdsladdone"x ];then
+    shift #shift cruds
+    shift #shift dsl
+    shift #shift add
+    shift #shift one
+    crudsdsladdone $@
 
-       $dir/mysql-test/bin/mysql-test $url $schemasql
-       exit  ## end
-    fi
+elif [ "$cmd"x == "crudsdsladdonemany"x ];then
+    shift #shift cruds
+    shift #shift dsl
+    shift #shift add
+    shift #shift onemany
+    crudsdsladdonemany $@
 
-    ## run all sql files
-    for sql in $(ls src/main/resources/sql/*.sql);do
-       echo $sql
-       $dir/mysql-test/bin/mysql-test $url $sql
-    done
+elif [ "$cmd"x == "crudsdsladdmanymany"x ];then
+    shift #shift cruds
+    shift #shift dsl
+    shift #shift add
+    shift #shift manymany
+    crudsdsladdmanymany $@
+
+elif [ "$cmd"x == "crudsdsladdgroup"x ];then
+    shift #shift cruds
+    shift #shift dsl
+    shift #shift add
+    shift #shift group
+    crudsdsladdmanymany $@
+
+elif [ "$cmd"x == "crudsdslrun"x ];then
+    dsl=$5
+    crudsdslrun $dsl
 
 else
     usage
