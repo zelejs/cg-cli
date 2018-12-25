@@ -679,7 +679,7 @@ elif [ "$cmd"x == "crudonemany"x ];then
    shift; ## shift master
 
    # config table
-   # $CONFCLI table reset --save
+   $CONFCLI table reset --save
    # $CONFCLI table add $master $@ --save
 
    ## gen slaves first
@@ -707,7 +707,7 @@ elif [ "$cmd"x == "testcrudonemany"x ];then
    slave_master='cg_master_resource_item'
 
    # config table
-   #$CONFCLI table reset --save
+   $CONFCLI table reset --save
    #$CONFCLI table add $master $slave --save
 
    ## gen slave master first
@@ -748,7 +748,7 @@ elif [ "$cmd"x == "testcrudonemanyx2"x ];then
 
 
    # config table
-   #$CONFCLI table reset --save
+   $CONFCLI table reset --save
    #$CONFCLI table add $master $slave $slave2 --save
 
    # config crud
@@ -774,7 +774,8 @@ elif [ "$cmd"x == "crudmanymany"x -o "$cmd"x == "testcrudmanymany"x ];then
 
    # config table
    $CONFCLI table reset --save
-   $CONFCLI table add $master $peer $relation --save
+   #$CONFCLI table add $master $peer $relation --save
+
    # config crud
    $CONFCLI crud reset --save
    $CONFCLI crud add manymany $master $peer $relation --save
@@ -798,7 +799,8 @@ elif [ "$cmd"x == "crudgroup"x -o "$cmd"x == "crudgroupby"x -o "$cmd"x == "testc
 
          # config table
          $CONFCLI table reset --save
-         $CONFCLI table add $group --save
+         #$CONFCLI table add $group --save
+
          # config crud
          $CONFCLI crud reset --save
          $CONFCLI crud add group $group --save
@@ -816,7 +818,8 @@ elif [ "$cmd"x == "crudgroup"x -o "$cmd"x == "crudgroupby"x -o "$cmd"x == "testc
 
       # config table
       $CONFCLI table reset --save
-      $CONFCLI table add $group --save
+      #$CONFCLI table add $group --save
+
       # config crud
       $CONFCLI crud reset --save
       $CONFCLI crud add group $group --save
@@ -845,7 +848,8 @@ elif [ "$cmd"x == "crudgroup"x -o "$cmd"x == "crudgroupby"x -o "$cmd"x == "testc
 
       # config table
       $CONFCLI table reset --save
-      $CONFCLI table add $group --save
+      #$CONFCLI table add $group --save
+
       # config crud
       $CONFCLI crud reset --save
       $CONFCLI crud add group $group --save
@@ -860,7 +864,8 @@ elif [ "$cmd"x == "crudgroup"x -o "$cmd"x == "crudgroupby"x -o "$cmd"x == "testc
 
        # config table
       $CONFCLI table reset --save
-      $CONFCLI table add $groupBy --save
+      #$CONFCLI table add $groupBy --save
+
       # config crud
       $CONFCLI crud reset --save
       $CONFCLI crud add group $group $groupBy $groupId --save
