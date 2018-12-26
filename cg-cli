@@ -515,11 +515,14 @@ dbshowcreatetable() {
     sql="show create table $table"
     result=$($dir/mysql-test/bin/mysql-test "$url" "$sql")
     #result="'tenant'|'CREATE TABLE \`tenant\` ( \`id\` bigint(20) NOT NULL, \`status\` int(11) DEFAULT NULL, \`name\` varchar(255) DEFAULT NULL, \`delete_flag\` int(11) NOT NULL DEFAULT '1', PRIMARY KEY (\`id\`)) ENGINE=InnoDB DEFAULT CHARSET=utf8'"
-    result=${result#*[|]}
-    result=${result#*[\']}
-    result=${result%[\']*}
-    result=${result//,/,!}
-
+    result=${result#*[|]}   ## remove before | 
+    result=${result#*[\']}  ## remove before '
+    result=${result%[\']*}  ## remove after '
+    result=${result//\',/\',!}  ## replace , with ,! 
+    result=${result//\)\)/\)!\)}  ## replace )) with )!) 
+    result=${result//\`id\` /! \`id\` }  ## replace )) with )!) 
+    result=${result//AUTO_INCREMENT,/AUTO_INCREMENT,!}  ## replace )) with )!) 
+     
     #result=${result#*[(]}
     #result=${result%[)]*}
     #arr=(${result//,/})
@@ -735,6 +738,9 @@ elif [ "$cmd"x == "crudmanymany"x -o "$cmd"x == "testcrudmanymany"x ];then
 elif [ "$cmd"x == "crudgroup"x -o "$cmd"x == "crudgroupby"x -o "$cmd"x == "testcrudgroup"x -o "$cmd"x == "testcrudgroupby"x ];then
 
    if [ "$cmd"x == "crudgroup"x ];then
+
+      shift  ## crud
+      shift  ## group
 
       ## skip --gen
       for group in $@;do
