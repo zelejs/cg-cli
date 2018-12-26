@@ -47,6 +47,7 @@ sub usage {
     print "   conf-cli crud  add onemany  <master> <slave:mid> [...]\n";
     print "   conf-cli crud  add manymany <master> <peer> <relation>\n";
     print "   conf-cli crud  add group    <group> [groupBy] [groupId]\n";
+    print "   conf-cli crud  add -f       </path/to/cruds.xml>\n";
 }
 sub usage_list {
     print "Usage: \n";
@@ -64,6 +65,8 @@ sub usage_crud {
     print "   conf-cli crud  add onemany  <master> <slave:mid> [...]\n";
     print "   conf-cli crud  add manymany <master> <peer> <relation>\n";
     print "   conf-cli crud  add group    <group> [groupBy] [groupId]\n";
+    print "   conf-cli crud  add -f       </path/to/cruds.xml>\n";
+    
 }
 sub usage_crud_add {
     print "Usage: \n";
@@ -71,6 +74,7 @@ sub usage_crud_add {
     print "   conf-cli crud  add onemany  <master> <slave:mid> [...]\n";
     print "   conf-cli crud  add manymany <master> <peer> <relation>\n";
     print "   conf-cli crud  add group    <group> [groupBy] [groupId]\n";
+    print "   conf-cli crud  add -f       </path/to/cruds.xml>\n";
 }
 
 if( !$domain ){
@@ -114,6 +118,7 @@ elsif($domain =~ /^table$/){
    }
 }
 elsif ($domain =~ /^crud$/){
+
     ## ok
     if($cmd =~ /^reset$/){
        ## ok
@@ -150,6 +155,23 @@ elsif ($domain =~ /^crud$/){
             if ($arg<1){
                 usage_crud_add;
                 exit;
+            }
+        }
+
+        elsif($op =~ /^\-f$/){
+            ## ok
+            if ($arg<1){
+                usage_crud_add;
+                exit;
+            }
+
+            my $cruds_file = $ARGV[1];
+            if($cruds_file && (!(-e $cruds_file))){
+                print "conf-cli crud add -f </path/to/cruds.xml>\n";
+                die "\nFatal: file $cruds_file not exists!\n";
+            }elsif(!($cruds_file)){
+                usage_crud_add;
+                exit
             }
         }
         
@@ -285,6 +307,26 @@ elsif($domain =~ /^table$/){
             my $groupId = shift @args;
 
             &crud_add_group($group, $groupBy, $groupId);
+            if($list){
+                &crud_list;
+            }
+
+        }elsif ($op =~ /^\-f$/){
+
+            my @args_in = @ARGV;
+            ## skip --dump, --save
+            my @args;
+            foreach(@args_in){
+                if(/^--/){
+                    next;
+                }
+                push(@args, $_);
+            }
+            ## skip end
+
+            my $cruds_file = shift @args;
+            &crud_add_cruds_file($cruds_file);
+
             if($list){
                 &crud_list;
             }
@@ -516,6 +558,18 @@ sub crud_add_group{
 
     push(@{$cruds_node->{crud}}, $crud->pointer);
 }
+
+sub crud_add_cruds_file{
+    my($cruds_file) = @_;
+
+    my $cruds_XML = XML::Smart->new($cruds_file);
+    $cruds_XML = $cruds_XML->cut_root ;
+
+    my $cruds_node =  $XML->{project}{build}{plugins}{plugin}{configuration}{cruds};
+
+    push(@{$cruds_node}, $cruds_XML->pointer);
+}
+
 
 ########################################
 ## TABLE Builder 
