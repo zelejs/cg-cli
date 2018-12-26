@@ -94,7 +94,7 @@ if($domain =~ /^list$/){
     }
 
     foreach(@ARGV){
-        if(/-t/ || /-c/){
+        if(/-t/ || /-T/ || /-c/){
             # ok
         }else{
             usage_list;
@@ -202,9 +202,9 @@ if($domain =~ /^list$/){
     foreach(@ARGV){
 
         ## do not need to config table, due to code-generator enhanced.        
-        #if(/-t/){
-        #    &table_list;
-        #}
+        if(/-T/){
+            &table_list;
+        }
 
         if(/-c/){
             &crud_list;
@@ -398,6 +398,7 @@ sub table_add {
 
         ## remove  :field$_$ 
         $tab =~ s/:[\w+\$_]+$//;
+        $tab =~ s/:[\w+\$_]+$//;
 
         push(@tabs, $tab);
     }
@@ -411,8 +412,6 @@ sub table_add {
         #$table_new->{table}->content(0, $_);
         #push(@{$tables_node->{table}}, $table_new->nodes);
 
-        print "table - $_";
-        
         my $table_new = XML::Smart->new();
         $table_new->content(0, $_);
 
@@ -506,7 +505,8 @@ sub crud_add_onemany {
         ## get slave table
         my $slave = $_;
 
-        ## remove after : (including $_$)
+        ## remove after : (including $_$ or :)
+        $slave =~ s/:[\w\$_]+$//;
         $slave =~ s/:[\w\$_]+$//;
 
         push(@slaves, $slave);

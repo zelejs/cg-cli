@@ -676,7 +676,7 @@ elif [ "$cmd"x == "crudonemany"x ];then
    $CONFCLI crud reset --save
    $CONFCLI table add $@ --save
 
-   #$CONFCLI list -t -c  ## do not need to show the config
+   $CONFCLI list -T  ## do not need to show the config
    ## gen crud
    gen
 
