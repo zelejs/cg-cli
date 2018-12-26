@@ -226,11 +226,10 @@ elsif($domain =~ /^table$/){
        }
        ## skip end
 
-       ## do not need to config tables, code-generator enhanced.
-       # &table_add(\@tabs);
-       # if($list){
-       #     &table_list;
-       # }
+       &table_add(\@tabs);
+       if($list){
+           &table_list;
+       }
        
     }elsif ($cmd =~ /reset/){
        &table_reset();
@@ -399,18 +398,27 @@ sub table_add {
 
         ## remove  :field$_$ 
         $tab =~ s/:[\w+\$_]+$//;
+
         push(@tabs, $tab);
     }
     ## end
  
     my $tables_node =  $XML->{project}{build}{plugins}{plugin}{configuration}{tables};
 
+    my $TABLE = XML::Smart->new();
     foreach(@tabs){
-         my $table_new = XML::Smart->new();
-         $table_new->{table}->content(0, $_);
+        #my $table_new = XML::Smart->new();
+        #$table_new->{table}->content(0, $_);
+        #push(@{$tables_node->{table}}, $table_new->nodes);
 
-         push(@{$tables_node->{table}}, $table_new->nodes);
+        print "table - $_";
+        
+        my $table_new = XML::Smart->new();
+        $table_new->content(0, $_);
+
+        push(@{$TABLE->{table}}, $table_new);
     }
+    push(@{$tables_node}, $TABLE);
 }
 
 sub table_reset {
@@ -466,6 +474,8 @@ sub crud_add_one {
        if(/--/){
            next;
        }
+       s/\:\w+$//;  ## remove :mid for slave item
+
        my $tab = $_;
 
        my $hash = {};

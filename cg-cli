@@ -656,6 +656,8 @@ elif [ "$cmd"x == "crudonemany"x ];then
    shift; ## shift onemany
    shift; ## shift master
 
+   ## first#1 step, genreate master model
+
    # config table
    $CONFCLI table reset --save
    # $CONFCLI table add $master $@ --save
@@ -666,6 +668,15 @@ elif [ "$cmd"x == "crudonemany"x ];then
    # config end
 
    $CONFCLI list -t -c
+   ## gen crud
+   gen
+
+
+   ## second#2 step, generator all slaves && children
+   $CONFCLI crud reset --save
+   $CONFCLI table add $@ --save
+
+   #$CONFCLI list -t -c  ## do not need to show the config
    ## gen crud
    gen
 
