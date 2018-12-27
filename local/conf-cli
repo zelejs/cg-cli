@@ -48,6 +48,7 @@ sub usage {
     print "   conf-cli crud  add manymany <master> <peer> <relation>\n";
     print "   conf-cli crud  add group    <group> [groupBy] [groupId]\n";
     print "   conf-cli crud  add -f       </path/to/cruds.xml>\n";
+    print "   conf-cli crud  add -l       <crud></crud>\n";
 }
 sub usage_list {
     print "Usage: \n";
@@ -66,6 +67,7 @@ sub usage_crud {
     print "   conf-cli crud  add manymany <master> <peer> <relation>\n";
     print "   conf-cli crud  add group    <group> [groupBy] [groupId]\n";
     print "   conf-cli crud  add -f       </path/to/cruds.xml>\n";
+    print "   conf-cli crud  add -l       <crud></crud>\n";
     
 }
 sub usage_crud_add {
@@ -75,6 +77,7 @@ sub usage_crud_add {
     print "   conf-cli crud  add manymany <master> <peer> <relation>\n";
     print "   conf-cli crud  add group    <group> [groupBy] [groupId]\n";
     print "   conf-cli crud  add -f       </path/to/cruds.xml>\n";
+    print "   conf-cli crud  add -l       <crud></crud>\n";
 }
 
 if( !$domain ){
@@ -173,6 +176,22 @@ elsif ($domain =~ /^crud$/){
                 usage_crud_add;
                 exit
             }
+        }
+
+        elsif($op =~ /^\-l$/){
+            ## ok
+            if ($arg<1){
+                usage_crud_add;
+                exit;
+            }
+
+            my $crud_line = $ARGV[1];
+            if($crud_line =~ /^\<crud\>/ && $crud_line =~ /\<\/crud\>$/){
+                ## pass
+            }else{
+                die "Syntax Error: Invalid input line: $crud_line\n";
+            }
+
         }
         
         else{
@@ -329,7 +348,29 @@ elsif($domain =~ /^table$/){
             if($list){
                 &crud_list;
             }
+
+        }elsif ($op =~ /^\-l$/){
+
+            my @args_in = @ARGV;
+            ## skip --dump, --save
+            my @args;
+            foreach(@args_in){
+                if(/^--/){
+                    next;
+                }
+                push(@args, $_);
+            }
+            ## skip end
+
+            my $crud_line = shift @args;
+            &crud_add_crud_line($crud_line);
+
+            if($list){
+                &crud_list;
+            }
         }
+
+
     }
 }
 
@@ -578,6 +619,16 @@ sub crud_add_cruds_file{
     my $cruds_node =  $XML->{project}{build}{plugins}{plugin}{configuration}{cruds};
 
     push(@{$cruds_node}, $cruds_XML->pointer);
+}
+
+sub crud_add_crud_line{
+    my($crud_line) = @_;
+
+    my $crud_XML = XML::Smart->new($crud_line);
+
+    my $cruds_node =  $XML->{project}{build}{plugins}{plugin}{configuration}{cruds};
+
+    push(@{$cruds_node}, $crud_XML->pointer);
 }
 
 

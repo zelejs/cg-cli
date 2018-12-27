@@ -842,14 +842,41 @@ elif [ "$cmd"x == "crud_f"x ];then
 
       cruds=$3
 
-      # config crud
-      $CONFCLI crud reset --save
-      $CONFCLI crud add -f $cruds --save
-      # config end
+      $CONFCLI table reset --save
+
+      ## ** CODE-GENERATOR DO NOT SUPPORT MULTI EXECUTION **
+
+      ## BEGIN 
+      ## config crud
+      #$CONFCLI crud reset --save
+      #$CONFCLI crud add -f $cruds --save
+      ## config end
    
-      $CONFCLI list -t -c
+      ##$CONFCLI list -t -c
       ## gen crud
-      gen
+      ##gen
+      ## END
+
+
+      ## ** EXECUTE FOR EACH CRUD **
+
+      result=$(cat $cruds)
+      result=${result//[[:space:]]/}  ## remove space
+      result=${result//\<cruds\>/}  ## remove <cruds>
+      result=${result//\<\/cruds\>/}  ## remove </cruds>
+      result=${result//\<\/crud\>/\<\/crud\> }  ## replace </crud> with </crud>[[:space:]]
+
+      for crud in $result;do
+         ## config crud
+         $CONFCLI crud reset --save
+         $CONFCLI crud add -l $crud --save
+            
+         $CONFCLI list -t -c
+         ## gen crud
+         gen
+
+      done
+
 
 elif [ "$cmd"x == "crudinitializetable"x ];then
    shift; ## shift config
