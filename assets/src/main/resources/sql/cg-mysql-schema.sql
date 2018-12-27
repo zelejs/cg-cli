@@ -6,7 +6,7 @@ CREATE TABLE `cg_master_resource_category` (
   `org_id` bigint(20) NOT NULL DEFAULT 0 COMMENT '资源归属部门',
   `pid` varchar(100) NOT NULL COMMENT '父节点',
   `name` varchar(100) NOT NULL COMMENT '名字',
-  `field` varchar(100) NOT NULL COMMENT '分组标识字段',
+  `field` varchar(100) DEFAULT NULL COMMENT '分组标识字段',
   `description` varchar(200) DEFAULT NULL COMMENT '说明',
   PRIMARY KEY (`id`),
   UNIQUE (`name`)
@@ -21,7 +21,7 @@ CREATE TABLE `cg_master_resource` (
   `user_id` bigint(20) DEFAULT NULL DEFAULT 0 COMMENT '资源归属用户',
   `code` varchar(100) DEFAULT NULL COMMENT '资源唯一编号',
   `title` varchar(100) DEFAULT NULL COMMENT '资源标题',
-  `category_group` varchar(50) DEFAULT NULL COMMENT '资源分类归属分组',
+  `category_field` varchar(50) DEFAULT NULL COMMENT '资源分类关联字段',
   `category_id` bigint(20) DEFAULT NULL COMMENT '资源分类ID',
   `created_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `registered_time` datetime DEFAULT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '注册时间',

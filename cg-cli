@@ -23,7 +23,9 @@ usage() {
   echo "    cg-cli test crud manymany"
   echo "    cg-cli test crud group"
   echo "    cg-cli test crud groupby"
+  echo "    cg-cli test crud groupby field"
 }
+
 
 usage_db() {
   echo "Usage:"
@@ -55,6 +57,7 @@ usage_test() {
   echo "    cg-cli test crud manymany"
   echo "    cg-cli test crud group"
   echo "    cg-cli test crud groupby"
+  echo "    cg-cli test crud groupby field"
 }
 
 ## start
@@ -278,6 +281,9 @@ elif [ "$cmd"x == "test"x ];then
            cmd=testcrudgroup
        elif [ "$3"x == "groupby"x ];then
            cmd=testcrudgroupby
+           if [ "$4"x == "field"x ];then
+               cmd=testcrudgroupbyfield
+            fi
        else
          usage
          exit
@@ -556,8 +562,10 @@ testinit(){
       cp $dir/assets/pom.xml $dir
    fi
 
-   if [ -d $dir/src/main/java/com/jfeat/am ];then
-      rm -rf $dir/src/main/java/com/jfeat/am
+   ## reset src file
+   if [ -d src/main/java/com/jfeat/am ];then
+      #echo "rm -rf src/main/java/com/jfeat/am"
+      rm -rf src/main/java/com/jfeat/am
    fi
 }
 
@@ -746,7 +754,7 @@ elif [ "$cmd"x == "crudmanymany"x -o "$cmd"x == "testcrudmanymany"x ];then
    ## gen crud
    gen
 
-elif [ "$cmd"x == "crudgroup"x -o "$cmd"x == "crudgroupby"x -o "$cmd"x == "testcrudgroup"x -o "$cmd"x == "testcrudgroupby"x ];then
+elif [ "$cmd"x == "crudgroup"x -o "$cmd"x == "crudgroupby"x -o "$cmd"x == "testcrudgroup"x -o "$cmd"x == "testcrudgroupby"x -o  "$cmd"x == "testcrudgroupbyfield"x ];then
 
    if [ "$cmd"x == "crudgroup"x ];then
 
@@ -792,7 +800,7 @@ elif [ "$cmd"x == "crudgroup"x -o "$cmd"x == "crudgroupby"x -o "$cmd"x == "testc
       gen
 
    ## gen groupby second step
-   elif [ "$cmd"x == "crudgroupby"x -o "$cmd"x == "testcrudgroupby"x ];then
+   elif [ "$cmd"x == "crudgroupby"x -o "$cmd"x == "testcrudgroupby"x -o  "$cmd"x == "testcrudgroupbyfield"x ];then
 
       if [ "$cmd"x == "crudgroupby"x ];then
          group=$3;
@@ -803,9 +811,13 @@ elif [ "$cmd"x == "crudgroup"x -o "$cmd"x == "crudgroupby"x -o "$cmd"x == "testc
          group='cg_master_resource_category'
          groupBy='cg_master_resource'
          groupId='category_id'
+
+      elif [ "$cmd"x == "testcrudgroupbyfield"x ];then
+         group='cg_master_resource_category'
+         groupBy='cg_master_resource'
+         groupId='category_field:field'
       fi
 
-     
       ### gen group as first step
 
       # config table
@@ -879,19 +891,28 @@ elif [ "$cmd"x == "crud_f"x ];then
 
 
 elif [ "$cmd"x == "crudinitializetable"x ];then
-   shift; ## shift config
-   shift; ## shift tables
+
+   if [ ! -e $dir/src/main/resources/sql/cg-mysql-schema.sql ];then
+      if [ ! -d $dir/src/main/resources/sql ];then
+          mkdir -p $dir/src/main/resources/sql
+      fi
+      cp $dir/assets/src/main/resources/sql/cg-mysql-schema.sql $dir/src/main/resources/sql
+   fi
+
+   shift ## shift crud
+   shift ## shift init
+   shift ## shift table
 
    # config tables
    $CONFCLI table reset --save
    $CONFCLI table add $@ --save
 
    $CONFCLI crud reset --save
-   for t in $@;do 
-      $CONFCLI crud add one $t --save
-   done
+   #for t in $@;do 
+   #    $CONFCLI crud add one $t --save
+   #done
 
-   $CONFCLI list -t -c
+   $CONFCLI list -T
 
    # gen persistance
    crudinitializetable
