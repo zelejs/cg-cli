@@ -44,7 +44,7 @@ sub usage {
     print "   conf-cli table add <table> [...]\n";
     print "   conf-cli crud  reset\n";
     print "   conf-cli crud  add one      <master> [...]\n";
-    print "   conf-cli crud  add onemany  <master> <slave:mid> [...]\n";
+    print "   conf-cli crud  add onemany  <master> <slave:mid> [<slave:mid:id>] <slave::relation:mid:id> [...]\n";
     print "   conf-cli crud  add manymany <master> <peer> <relation>\n";
     print "   conf-cli crud  add group    <group> [groupBy] [groupId]\n";
     print "   conf-cli crud  add -f       </path/to/cruds.xml>\n";
@@ -63,7 +63,7 @@ sub usage_crud {
     print "Usage: \n";
     print "   conf-cli crud  reset\n";
     print "   conf-cli crud  add one      <master> [...]\n";
-    print "   conf-cli crud  add onemany  <master> <slave:mid> [...]\n";
+    print "   conf-cli crud  add onemany  <master> <slave:mid> [<slave:mid:id>] <slave::relation:mid:id> [...]\n";
     print "   conf-cli crud  add manymany <master> <peer> <relation>\n";
     print "   conf-cli crud  add group    <group> [groupBy] [groupId]\n";
     print "   conf-cli crud  add -f       </path/to/cruds.xml>\n";
@@ -73,7 +73,7 @@ sub usage_crud {
 sub usage_crud_add {
     print "Usage: \n";
     print "   conf-cli crud  add one      <master> [...]\n";
-    print "   conf-cli crud  add onemany  <master> <slave:mid> [...]\n";
+    print "   conf-cli crud  add onemany  <master> <slave:mid> [<slave:mid:id>] <slave::relation:mid:id> [...]\n";
     print "   conf-cli crud  add manymany <master> <peer> <relation>\n";
     print "   conf-cli crud  add group    <group> [groupBy] [groupId]\n";
     print "   conf-cli crud  add -f       </path/to/cruds.xml>\n";
@@ -441,6 +441,9 @@ sub table_add {
         $tab =~ s/:[\w+\$_]+$//;
         $tab =~ s/:[\w+\$_]+$//;
 
+        ## remove ::relation
+        $tab =~ s/::[\w+\$_]+$//;
+
         push(@tabs, $tab);
     }
     ## end
@@ -541,6 +544,8 @@ sub crud_add_onemany {
         ## get masterId only at first slave
         my $masterId = $_;
         $masterId =~ s/^\w+://;
+        $masterId =~ s/^\://;
+
         push(@ids, $masterId);
 
         ## get slave table
@@ -549,6 +554,9 @@ sub crud_add_onemany {
         ## remove after : (including $_$ or :)
         $slave =~ s/:[\w\$_]+$//;
         $slave =~ s/:[\w\$_]+$//;
+
+        ## remove ::relation
+        $slave =~ s/::[\w\$_]+$//;
 
         push(@slaves, $slave);
     }
