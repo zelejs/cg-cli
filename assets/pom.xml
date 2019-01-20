@@ -20,29 +20,17 @@
 
     <properties>
         <skipStandalone>false</skipStandalone>
-        <sb-base.version>1.0.0</sb-base.version>
         <crud-base.version>0.0.1</crud-base.version>
-        <crud-plus.version>0.0.1</crud-plus.version>
-        <sb-log.version>1.0.0</sb-log.version>
-        <sb-debug.version>1.0.0</sb-debug.version>
+        <crud-plus.version>0.0.5</crud-plus.version>
+        <crud-log.version>0.0.1</crud-log.version>
         <sb-starter-test.version>1.0.0</sb-starter-test.version>
     </properties>
 
     <dependencies>
         <dependency>
             <groupId>com.jfeat</groupId>
-            <artifactId>sb-base</artifactId>
-            <version>${sb-base.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.jfeat</groupId>
-            <artifactId>sb-log</artifactId>
-            <version>${sb-log.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.jfeat</groupId>
-            <artifactId>sb-debug</artifactId>
-            <version>${sb-debug.version}</version>
+            <artifactId>crud-log</artifactId>
+            <version>${crud-log.version}</version>
         </dependency>
         <dependency>
             <groupId>com.jfeat</groupId>

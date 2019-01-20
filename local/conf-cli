@@ -443,9 +443,16 @@ sub table_add {
 
         ## remove ::relation
         ##$tab =~ s/::[\w+\$_]+$//;
+        my $relationTab = $tab;
         $tab =~ s/:[\w+\$_]+:$//;
-
         push(@tabs, $tab);
+
+        if(!($relationTab eq $tab)){
+            $relationTab =~ s/^[\w+\$_]+//;
+            $relationTab =~ s/^://;
+            $relationTab =~ s/:$//;
+            push(@tabs, $relationTab);
+        }
     }
     ## end
  
