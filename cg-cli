@@ -10,7 +10,7 @@ usage() {
   echo "    cg-cli db run sql [/path/to/schema.sql]"
   echo "    cg-cli db show tables"
   echo "    cg-cli db show create table <table-name>"
-  echo "    cg-cli crud init"
+  echo "    cg-cli crud reset"
   echo "    cg-cli crud one      <master> [...]"
   echo "    cg-cli crud onemany  <master> <slave:mid:id> [slave:mid1,mid2] [slave:relation::mid:id] [...]"
   echo "    cg-cli crud manymany <master> <peer> <relation>"
@@ -41,7 +41,7 @@ usage_db() {
 usage_crud() {
   echo "Usage:"
   echo "    cg-cli [OPTIONS] --help --gen"
-  echo "    cg-cli crud init"
+  echo "    cg-cli crud reset"
   echo "    cg-cli crud one      <master> [...]"
   echo "    cg-cli crud onemany  <master> <slave:mid:id> [slave:mid1,mid2] [slave::relation:mid:id] [...]"
   echo "    cg-cli crud manymany <master> <peer> <relation>"
@@ -161,14 +161,14 @@ elif [ "$cmd"x == "db"x  ];then
 elif [ "$cmd"x == "crud"x ];then
    subcmd=$2
 
-   if [ "$subcmd"x == "init"x ];then
+   if [ "$subcmd"x == "reset"x ];then
       ## reset src file
       if [ -d src/main/java/com/jfeat/am ];then
          #echo "rm -rf src/main/java/com/jfeat/am"
          rm -rf src/main/java/com/jfeat/am
       fi
 
-      cmd=crudinit
+      cmd=crudreset
 
    elif [ "$subcmd"x == "one"x ];then
       
@@ -239,7 +239,6 @@ elif [ "$cmd"x == "crud"x ];then
    elif [ "$subcmd"x == "-f"x ];then
       cruds=$3
 
-    
 
       if [ ! $cruds ];then
          echo "    cg-cli crud -f       </path/to/cruds.xml>"
@@ -622,7 +621,7 @@ elif [ "$cmd"x == "dbshowcreatetable"x ];then
    tab=$5
    dbshowcreatetable $tab
 
-elif [ "$cmd"x == "crudinit"x ];then
+elif [ "$cmd"x == "crudreset"x ];then
    echo done #do nothing
 
 elif [ "$cmd"x == "crudone"x -o "$cmd"x == "testcrudone"x ];then

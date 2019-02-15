@@ -7,7 +7,7 @@ usage() {
   echo "    cruds-cli add onemany <master> --slave <slave> <mid> [wid] [...]"
   echo "    cruds-cli add manymany <master> <peer> <relation>"
   echo "    cruds-cli add group <group> [groupBy] [groupId]"
-  echo "    cruds-cli run -f <crud-config>"
+  echo "    cruds-cli run -f <crud-config> --sql <-schema.sql>"
 }
 
 ## start
