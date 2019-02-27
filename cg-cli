@@ -380,8 +380,10 @@ dir=$(readlink -f $0)
 dir=$(dirname $dir)
 CONFCLI="perl -I$dir/local $dir/local/conf-cli"
 
+## working dir
 POM=code-generator-pom.xml
-pom=gen/$POM
+pom=${PWD}/gen/$POM
+
 if [ ! -e $pom ];then
    if [ ! -d gen ];then
        mkdir gen
