@@ -439,7 +439,7 @@ sub table_add {
 
         ## remove  :field$_$ 
         $tab =~ s/:[\w+\$_]+$//;
-        $tab =~ s/:[\w+\$_]+$//;
+        $tab =~ s/:[\w+\$_\,]+$//;
 
         ## remove ::relation
         ##$tab =~ s/::[\w+\$_]+$//;
@@ -551,8 +551,8 @@ sub crud_add_onemany {
     foreach(@slaves_mid){
         ## get masterId only at first slave
         my $masterId = $_;
-        $masterId =~ s/^\w+://;
-        $masterId =~ s/^\://;
+        $masterId =~ s/^\w+://;  ## remove table name
+        $masterId =~ s/^\://;    ## remove :
 
         push(@ids, $masterId);
 
@@ -563,10 +563,9 @@ sub crud_add_onemany {
         $slave =~ s/:[\w\$_]+$//;
         $slave =~ s/:[\w\$_]+$//;
 
-        ## remove ::relation
-        #$slave =~ s/::[\w\$_]+$//;
-        $slave =~ s/:[\w\$_]+:$//;
-
+        ## remove after :
+        $slave =~ s/:[\w\$_]+:$//;  ## remove relation::mid:id
+        $slave =~ s/:[\w\$_\,]+$//; ## remove mid1,mid2
 
         push(@slaves, $slave);
     }

@@ -54,13 +54,13 @@ cg-cli crud onemany master_table slave_table:mid_1,mid_2
         <master>master_table</master>
         <masterId>mid_1,mid_2</masterId>
         <slaves>
-            <slave>slave_table:mid_1,mid_2</slave>
+            <slave>slave_table</slave>
         </slaves>
     </crud>
 </cruds>
 
 <tables>
-    <table>slave_table:mid_1,mid_2</table>
+    <table>slave_table</table>
 </tables>
 ```
 
