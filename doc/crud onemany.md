@@ -66,8 +66,8 @@ cg-cli crud onemany master_table slave_table:mid_1,mid_2
 
 其中：
 
-* 约定：主表与从表必须要有相同字段名的符合键
-* `mid_1` 与 `mid_2` 即为符合键的字段名
+* 约定：主表与从表必须要有相同字段名的复合键
+* `mid_1` 与 `mid_2` 即为复合键的字段名
 
 
 
