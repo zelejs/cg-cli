@@ -23,6 +23,8 @@ my $cmd = shift @ARGV;
 my $dump=undef;
 my $save=undef;
 my $list=undef;
+my $out=undef;
+my $output=undef;
 foreach(@ARGV){
   if(/--dump/){
     $dump=1
@@ -33,11 +35,15 @@ foreach(@ARGV){
   if(/--list/){
     $list=1
   }
+  if(/--out/){
+    $out=1
+    $output=shift @ARGV;
+  }
 }
 
 sub usage {
     print "Usage: \n";
-    print "   conf-cli [--list] [--save] [--dump]\n";
+    print "   conf-cli [--list] [--save] [--dump] [--out /path/to/cruds.xml]\n";
     print "   conf-cli list -t -c\n";
     print "";
     print "   conf-cli table reset\n";
