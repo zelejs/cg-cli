@@ -3,7 +3,35 @@
 use lib qw(local);
 use XML::Smart;
 use Data::Dumper;
-
+use Cwd;
+my $cwd = cwd();
+##
+## how to set node attribute
+# my $XML = XML::Smart->new("<crud></crud>");
+# $XML->{crud}->{mask} = "peer";
+# print Dumper($XML->data);
+##
+## how to set node content
+# my $XML = XML::Smart->new("<crud></crud>");
+# $XML->{crud}->content(0, "hash");
+# print Dumper($XML->data);
+##
+## how to add new node
+#  my $XML = XML::Smart->new("<cruds></cruds>");
+#  my $node = XML::Smart->new();
+#  $node->{crud}->{mask}->content(0, "peer");
+#  $node->{crud}->{master}->content(0, "master");
+#  push(@{$XML->{cruds}->{crud}}, $node->cut_root->pointer);
+#  push(@{$XML->{cruds}->{crud}}, $node->cut_root->pointer);
+#  print Dumper($XML->data);
+#  # how to remove root node
+#  my @empty=();
+#  $XML->{cruds} = \@empty;
+#  print Dumper($XML->data);
+#  # how to reset node
+#  $XML->{cruds} = {};
+#  print Dumper($XML->data);
+##
 my $root = $0;
 $root =~ s/\/[\w\.-]+$//;
 $root =~ s/\/[\w\.-]+$//;
@@ -24,28 +52,28 @@ my $dump=undef;
 my $save=undef;
 my $list=undef;
 my $out=undef;
-my $output=undef;
 foreach(@ARGV){
+  if(/--list/){
+    $list=1;
+  }
   if(/--dump/){
-    $dump=1
+    $dump=1;
   }
   if(/--save/){
-    $save=1
-  }
-  if(/--list/){
-    $list=1
+    $save=1;
+    $out=undef;
   }
   if(/--out/){
-    $out=1
-    $output=shift @ARGV;
+    $out=1;
+    $save=undef;
   }
 }
 
 sub usage {
     print "Usage: \n";
-    print "   conf-cli [--list] [--save] [--dump] [--out /path/to/cruds.xml]\n";
+    print "   conf-cli [OPTIONS] [--list] [--save] 【--out] [--dump]\n";
     print "   conf-cli list -t -c\n";
-    print "";
+    print "OPTIONS:\n";
     print "   conf-cli table reset\n";
     print "   conf-cli table add <table> [...]\n";
     print "   conf-cli crud  reset\n";
@@ -150,7 +178,6 @@ elsif ($domain =~ /^crud$/){
                 exit;
             }
         }
-
         elsif($op =~ /^manymany$/){
             ## ok
             if ($arg<3){
@@ -158,7 +185,6 @@ elsif ($domain =~ /^crud$/){
                 exit;
             }
         }
-
         elsif($op =~ /^group$/){
             ## ok
             if ($arg<1){
@@ -166,7 +192,6 @@ elsif ($domain =~ /^crud$/){
                 exit;
             }
         }
-
         elsif($op =~ /^\-f$/){
             ## ok
             if ($arg<1){
@@ -183,7 +208,6 @@ elsif ($domain =~ /^crud$/){
                 exit
             }
         }
-
         elsif($op =~ /^\-l$/){
             ## ok
             if ($arg<1){
@@ -198,9 +222,7 @@ elsif ($domain =~ /^crud$/){
                 die "Syntax Error: Invalid input line: $crud_line\n";
             }
 
-        }
-        
-        else{
+        }else{
            usage_crud_add;
            exit;
         }
@@ -220,7 +242,21 @@ my $XML = XML::Smart->new($pom);
 #$XML = $XML->cut_root ;
 #my $connector = $XML->{Service}[0]{Connector}("protocol", "eq", "HTTP/1.1");
 #my $port = $connector->{port};
+my $output = "$cwd/cruds.xml";
+my $output_exitst = undef;
+if(-e $output){
+    $output_exitst=1;
+}
+my $OUTPUT = XML::Smart->new($output_exitst ? $output : "<cruds></cruds>");
 
+##
+sub get_cruds_node{
+    if($save){
+        return $XML->{project}{build}{plugins}{plugin}{configuration}{cruds};
+    }
+    ## for out and for test
+    return $OUTPUT->{cruds};
+}
 
 ## 
 if($domain =~ /^list$/){
@@ -375,8 +411,6 @@ elsif($domain =~ /^table$/){
                 &crud_list;
             }
         }
-
-
     }
 }
 
@@ -389,8 +423,12 @@ print Dumper($XML->data);
 print "\n##############################################\n";
 }
 if($save){
-   $XML->save($pom);
+    $XML->save($pom);
 }
+if($out){
+    $OUTPUT->save($output);
+}
+
 
 ########################################
 ## Table Domain
@@ -491,7 +529,8 @@ sub table_reset {
 ########################################
 sub crud_list {
 
-   my $cruds_node =  $XML->{project}{build}{plugins}{plugin}{configuration}{cruds};
+   #my $cruds_node =  $XML->{project}{build}{plugins}{plugin}{configuration}{cruds};
+   my $cruds_node = get_cruds_node();
    my @cruds = @{$cruds_node->{crud}};
 
    my $CRUDS_NEW = XML::Smart->new();
@@ -515,16 +554,23 @@ sub crud_list {
 }
 
 sub crud_reset {
-    my $configuration =  $XML->{project}{build}{plugins}{plugin}{configuration};
-    my @empty=();
-    $configuration->{cruds} = \@empty;
+    if($save){
+       my $configuration =  $XML->{project}{build}{plugins}{plugin}{configuration};
+       my @empty=();
+       $configuration->{cruds} = \@empty;
+    }
+    
+    if($out){
+       $OUTPUT->{cruds} = {};
+    }
 }
 
 sub crud_add_one {
    my($tabs_ref) = @_;
    my @tabs = @{$tabs_ref};
 
-   my $cruds_node =  $XML->{project}{build}{plugins}{plugin}{configuration}{cruds};
+   #my $cruds_node =  $XML->{project}{build}{plugins}{plugin}{configuration}{cruds};
+   my $cruds_node = get_cruds_node();
 
    ## build hash for create_crud
    foreach(@tabs){
@@ -577,7 +623,8 @@ sub crud_add_onemany {
     }
     ## end
 
-    my $cruds_node =  $XML->{project}{build}{plugins}{plugin}{configuration}{cruds};
+    #my $cruds_node =  $XML->{project}{build}{plugins}{plugin}{configuration}{cruds};
+    my $cruds_node = get_cruds_node();
 
     ## build hash for create_crud
     my $hash = {};
@@ -597,7 +644,8 @@ sub crud_add_onemany {
 sub crud_add_manymany{
     my($master, $peer, $relation) = @_;
 
-    my $cruds_node =  $XML->{project}{build}{plugins}{plugin}{configuration}{cruds};
+    #my $cruds_node =  $XML->{project}{build}{plugins}{plugin}{configuration}{cruds};
+    my $cruds_node = get_cruds_node();
 
     ## build hash for create_crud
     my $hash = {};
@@ -615,7 +663,8 @@ sub crud_add_manymany{
 sub crud_add_group{
     my($group, $groupBy, $groupId) = @_;
 
-    my $cruds_node =  $XML->{project}{build}{plugins}{plugin}{configuration}{cruds};
+    #my $cruds_node =  $XML->{project}{build}{plugins}{plugin}{configuration}{cruds};
+    my $cruds_node = get_cruds_node();
 
     ## build hash for create_crud
     my $hash = {};
@@ -632,14 +681,15 @@ sub crud_add_group{
 
     push(@{$cruds_node->{crud}}, $crud->pointer);
 }
-
+ 
 sub crud_add_cruds_file{
     my($cruds_file) = @_;
 
     my $cruds_XML = XML::Smart->new($cruds_file);
     $cruds_XML = $cruds_XML->cut_root ;
 
-    my $cruds_node =  $XML->{project}{build}{plugins}{plugin}{configuration}{cruds};
+    #my $cruds_node =  $XML->{project}{build}{plugins}{plugin}{configuration}{cruds};
+    my $cruds_node = get_cruds_node();
 
     push(@{$cruds_node}, $cruds_XML->pointer);
 }
@@ -649,7 +699,8 @@ sub crud_add_crud_line{
 
     my $crud_XML = XML::Smart->new($crud_line);
 
-    my $cruds_node =  $XML->{project}{build}{plugins}{plugin}{configuration}{cruds};
+    #my $cruds_node =  $XML->{project}{build}{plugins}{plugin}{configuration}{cruds};
+    my $cruds_node = get_cruds_node();
 
     push(@{$cruds_node}, $crud_XML->pointer);
 }
