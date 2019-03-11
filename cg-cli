@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
+## CONFCLI="perl -I$dir/local $dir/local/conf-cli"
 usage() {
   echo "Usage:"
   echo "    cg-cli [OPTIONS] --help --gen"
   echo "    cg-cli module get"
   echo "    cg-cli module set <module-name> [parent-module]"
-  echo "    cg-cli db get config"
-  echo "    cg-cli db set config <database> [localhost] [3306] [root] [root]"
+  echo "    cg-cli db get url"
+  echo "    cg-cli db set url <database> [localhost] [3306] [root] [root]"
   echo "    cg-cli db sanity"
   echo "    cg-cli db run sql [/path/to/schema.sql]"
   echo "    cg-cli db show tables"
@@ -25,14 +26,15 @@ usage() {
   echo "    cg-cli test crud group"
   echo "    cg-cli test crud groupby"
   echo "    cg-cli test crud groupby field"
+  echo "    cg-cli yaml get url"
+  echo "    cg-cli yaml run sql [test]"
+  echo "    cg-cli yaml show create tables"
 }
-
-
 usage_db() {
   echo "Usage:"
   echo "    cg-cli [OPTIONS] --help --gen"
-  echo "    cg-cli db get config"
-  echo "    cg-cli db set config <database> [localhost] [3306] [root] [root]"
+  echo "    cg-cli db get url"
+  echo "    cg-cli db set url <database> [localhost] [3306] [root] [root]"
   echo "    cg-cli db sanity"
   echo "    cg-cli db run sql [/path/to/schema.sql]"
   echo "    cg-cli db show tables"
@@ -82,7 +84,7 @@ for p in $@;do
 done
 
 
-if [  "$cmd"x == "module"x ];then
+if [ "$cmd"x == "module"x ];then
    subcmd=$2
 
    if [ ! $subcmd ];then
@@ -105,10 +107,10 @@ if [  "$cmd"x == "module"x ];then
 elif [ "$cmd"x == "db"x  ];then
    subcmd=$2$3
 
-   if [ "$subcmd"x == "getconfig"x ];then
-      cmd=dbgetconfig
+   if [ "$subcmd"x == "geturl"x ];then
+      cmd=dbgeturl
 
-   elif [ "$subcmd"x == "setconfig"x ];then
+   elif [ "$subcmd"x == "seturl"x ];then
       ## $4  database
       ## $5  host
       ## $6  port
@@ -125,7 +127,7 @@ elif [ "$cmd"x == "db"x  ];then
             exit
          fi
       fi
-      cmd=dbsetconfig
+      cmd=dbseturl
 
    elif [ "$subcmd"x == "sanity"x ];then
       cmd=dbsanity
@@ -369,6 +371,43 @@ elif [ "$cmd"x == "cruds"x ];then
        usage_cruds
        exit
    fi
+elif [ "$cmd"x == "yaml"x ];then
+   subcmd=$2
+
+   if [ "$subcmd"x == "get"x ];then
+      arg=$3;
+      if [ "$arg"x == "url"x ];then
+          cmd=yamlgeturl
+      else
+         echo "Usage: cg-cli yaml get url"
+         exit
+      fi
+   elif [ "$subcmd"x == "run"x ];then
+      arg=$3;
+      if [ "$arg"x == "sql"x ];then
+          cmd=yamlrunsql
+      else 
+         echo "Usage: cg-cli yaml run sql [test]"
+         exit
+      fi
+   elif [ "$subcmd"x == "show"x ];then
+      arg3=$3;
+      arg4=$4;
+
+      if [ "$arg3"x == "create"x -a "$arg4"x == "tables"x ];then
+            cmd=yamlshowcreatetables
+      else 
+         echo "Usage: cg-cli yaml show create tables"
+         exit
+      fi
+   else 
+       echo "Usage:"
+       echo "    cg-cli yaml get url"
+       echo "    cg-cli yaml run sql [test]"
+       echo "    cg-cli yaml show create tables"
+       exit
+   fi
+
 else
     usage
     exit
@@ -441,13 +480,13 @@ moduleset() {
    moduleget
 }
 
-dbgetconfig(){
+dbgeturl(){
     #grep dbUrl gen/$POM | grep -v '\$'
     grep '\<url\>' gen/$POM | grep -v '\$'
 }
 
 ## config database
-dbsetconfig() {
+dbseturl() {
     if [ ! -e gen/$POM ];then
        cp $dir/assets/$POM gen/$POM
     fi
@@ -520,6 +559,59 @@ dbrunsql(){
     done
 }
 
+yamlrunsql(){
+   url=$1
+   ## for test database
+   test=$2
+   
+   if [ $test ];then
+      url=$(echo $url | sed 's/\/[a-z]*\?/\/test\?/g')
+      url=${url//\/test\?/\/$test\?}  ## create table with [[:nothing:]] ) 
+   fi
+
+   echo $url
+   echo ''
+
+   ## run all sql files
+   for sql in $(ls src/main/resources/sql/*.sql);do
+      echo $sql
+      echo '---'
+      $dir/mysql-test/bin/mysql-test $url $sql
+      
+      ## show create tables
+      subyamlshowcreatetables $url $sql
+   done
+}
+
+yamlshowcreatetables(){
+    url=$1
+
+    ## run all sql files
+    for sql in $(ls src/main/resources/sql/*.sql);do
+       subyamlshowcreatetables $url $sql
+    done
+}
+
+subyamlshowcreatetables(){
+   url=$1
+   sql=$2
+
+    ## remove CREATE TABLE
+   result=$(grep "CREATE TABLE" $sql)
+
+   ## only if has result
+   result=${result//CREATE[[:space:]]TABLE/}  ## CREATE TABLE with [[:nothing:]] ) 
+   result=${result//create[[:space:]]table/}  ## create table with [[:nothing:]] ) 
+   result=${result//\(/ }  ## replace ( with [[:space:]])
+   result=${result//\`/}  ## remove all `
+
+   ## show create table
+   for t in $result;do  
+      dbshowcreatetable $url $t
+      echo ''
+   done
+}
+
 dbshowtables() {
     db=$(match_database)
     sql="select TABLE_NAME from INFORMATION_SCHEMA.TABLES where TABLE_SCHEMA='$db' and TABLE_NAME <> 'schema_version'"
@@ -529,17 +621,20 @@ dbshowtables() {
 }
 
 dbshowcreatetable() {
-    table=$1
+    url=$1
+    table=$2
     sql="show create table $table"
+
     result=$($dir/mysql-test/bin/mysql-test "$url" "$sql")
     #result="'tenant'|'CREATE TABLE \`tenant\` ( \`id\` bigint(20) NOT NULL, \`status\` int(11) DEFAULT NULL, \`name\` varchar(255) DEFAULT NULL, \`delete_flag\` int(11) NOT NULL DEFAULT '1', PRIMARY KEY (\`id\`)) ENGINE=InnoDB DEFAULT CHARSET=utf8'"
     result=${result#*[|]}   ## remove before | 
     result=${result#*[\']}  ## remove before '
     result=${result%[\']*}  ## remove after '
-    result=${result//\',/\',!}  ## replace , with ,! 
+    #result=${result//\',/\',!}  ## replace , with ,! 
+    result=${result//,/,!}  ## replace , with ,! 
     result=${result//\)\)/\)!\)}  ## replace )) with )!) 
     result=${result//\`id\` /! \`id\` }  ## replace )) with )!) 
-    result=${result//AUTO_INCREMENT,/AUTO_INCREMENT,!}  ## replace )) with )!) 
+    #result=${result//AUTO_INCREMENT,/AUTO_INCREMENT,!}  ## replace )) with )!) 
      
     #result=${result#*[(]}
     #result=${result%[)]*}
@@ -551,8 +646,8 @@ dbshowcreatetable() {
 
 crudinitializetable() {
    if [ "$gen"x == "--gen"x ];then
-      echo "mvn -Dinit=true com.jfeat:sb-code-generator:1.3.3:generate -f $pom"
-      mvn -Dinit=true com.jfeat:sb-code-generator:1.3.3:generate -f $pom
+      echo "mvn -Dinit=true com.jfeat:sb-code-generator:1.3.4:generate -f $pom"
+      mvn -Dinit=true com.jfeat:sb-code-generator:1.3.4:generate -f $pom
    fi
 }
 
@@ -583,8 +678,8 @@ testinit(){
 
 gen() {
    if [ "$gen"x == "--gen"x ];then
-      echo "mvn com.jfeat:sb-code-generator:1.3.3:generate -f $pom"
-      mvn com.jfeat:sb-code-generator:1.3.3:generate -f $pom
+      echo "mvn com.jfeat:sb-code-generator:1.3.4:generate -f $pom"
+      mvn com.jfeat:sb-code-generator:1.3.4:generate -f $pom
    fi
 }
 
@@ -603,11 +698,11 @@ if [ "$cmd"x == "moduleget"x ];then
 elif [ "$cmd"x == "moduleset"x ];then
    moduleset $@
 
-elif [ "$cmd"x == "dbgetconfig"x ];then
-   dbgetconfig $@
+elif [ "$cmd"x == "dbgeturl"x ];then
+   dbgeturl $@
 
-elif [ "$cmd"x == "dbsetconfig"x ];then
-   dbsetconfig $@
+elif [ "$cmd"x == "dbseturl"x ];then
+   dbseturl $@
 
 elif [ "$cmd"x == "dbsanity"x ];then
    dbsanity
@@ -621,7 +716,7 @@ elif [ "$cmd"x == "dbshowtables"x ];then
 
 elif [ "$cmd"x == "dbshowcreatetable"x ];then
    tab=$5
-   dbshowcreatetable $tab
+   dbshowcreatetable $url $tab
 
 elif [ "$cmd"x == "crudreset"x ];then
    echo done #do nothing
@@ -931,6 +1026,32 @@ elif [ "$cmd"x == "crudinitializetable"x ];then
 
    # gen persistance
    crudinitializetable
+elif [ "$cmd"x == "yamlgeturl"x ];then
+    YAMLCLI="perl -I$dir/local $dir/local/yaml-cli"
+
+    ## get active url from application.yml
+    url=$($YAMLCLI get active url);
+
+    echo $url;
+
+elif [ "$cmd"x == "yamlrunsql"x ];then
+    YAMLCLI="perl -I$dir/local $dir/local/yaml-cli"
+
+    ## get active url from application.yml
+    url=$($YAMLCLI get active url);
+
+    ## for test database
+    test=$4
+
+    yamlrunsql $url $test
+
+elif [ "$cmd"x == "yamlshowcreatetables"x ];then
+   YAMLCLI="perl -I$dir/local $dir/local/yaml-cli"
+
+    ## get active url from application.yml
+    url=$($YAMLCLI get active url);
+
+    yamlshowcreatetables $url
 
 else
     usage

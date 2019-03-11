@@ -1,0 +1,92 @@
+#!/usr/bin/env perl
+use lib qw(local);
+use YAML::Tiny;
+use Data::Dumper;
+
+sub usage {
+    print "Usage: yaml-cli get active url \n";
+}
+
+my $cmd = shift @ARGV;
+
+if($cmd =~ get){
+    my $arg2 = shift @ARGV;
+    my $arg3 = shift @ARGV;
+    
+    $cmd = "$cmd$arg2$arg3";
+
+    if($cmd =~ getactiveurl){
+        my $url = &getactiveurl;
+        print $url;
+    }else{
+        usage();
+        exit(0);
+    }
+}else{
+    usage();
+    exit(0);
+}
+
+
+sub getactiveurl{
+    
+    # Open the config
+    my $yaml_file = 'src/main/resources/application.yml';
+    if(! (-e $yaml_file ) ){
+        print "$yaml_file not exists\n";
+        exit(0);
+    }
+
+    my @yaml_lines = &read_lines($yaml_file);
+
+    ## remove comment lines and comments after line
+    my @lines=();
+    foreach(@yaml_lines){
+        if(/^#/){
+            next;
+        }
+        s/#.+//;
+        push(@lines,$_);
+    }
+    ## end remove comments
+    my $yaml_string = join("", @lines);
+    #print $yaml_string;
+
+    ## remove all comment lines for YAML
+    my $yaml = YAML::Tiny->read_string( $yaml_string );
+    #print Dumper($yaml);
+
+    my $active_profile = $yaml->[0]->{spring}->{profiles}->{active};
+
+    #my $array_size = scalar @{$yaml};
+    my $active_url=undef;
+    foreach(@{$yaml}){
+        my $ref = $_;
+        if(exists($ref->{spring}->{profiles})){
+            my $profiles = ($ref->{spring}->{profiles});
+
+            if($active_profile =~ $profiles){
+                $active_url  = ($ref->{spring}->{datasource}->{url});
+                my $username = ($ref->{spring}->{datasource}->{username});
+                my $password = ($ref->{spring}->{datasource}->{password});
+
+                $active_url =~ s/\?/\?user=$username&password=$password&/;
+            }
+        }
+    }
+    return $active_url;
+}
+
+
+sub read_lines{
+  my ($in) = @_;
+
+  my @data;
+
+  open my $fh, "<", "$in";
+  @data = <$fh>;
+  close $fh;
+
+  return @data;
+}
+
