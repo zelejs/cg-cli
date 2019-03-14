@@ -5,33 +5,60 @@ use XML::Smart;
 use Data::Dumper;
 use Cwd;
 my $cwd = cwd();
-##
-## how to set node attribute
-# my $XML = XML::Smart->new("<crud></crud>");
-# $XML->{crud}->{mask} = "peer";
+#
+#### how to set node attribute
+# my $node = XML::Smart->new("<crud></crud>");
+# $node->{crud}->{mask} = "peer";
+# print Dumper($node->data);
+# exit(0);
+#
+#### how to set node content
+# my $node = XML::Smart->new("<crud></crud>");
+# $node->{crud}->content(0, "string");
+# print Dumper($node->data);
+# exit(0);
+#
+#### how to get node hash
+# my $node = XML::Smart->new("<crud><mask>master</mask><master>cg-master</master></crud>");
+# print Dumper($node->pointer_ok)."\n";
+# my $hash = $node->pointer_ok;
+# print $hash->{crud}->{mask}->{CONTENT}."\n";
+# exit(0);
+#
+#### how to add child node to parent NODE  1/2
+# my $XML = XML::Smart->new("<cruds></cruds>");
+# my $node = XML::Smart->new("<crud><mask>master</mask><master>cg-master</master></crud>");
+# push(@{$XML->{cruds}->{crud}}, $node->cut_root->pointer);
 # print Dumper($XML->data);
-##
-## how to set node content
-# my $XML = XML::Smart->new("<crud></crud>");
-# $XML->{crud}->content(0, "hash");
+# exit(0);
+#### how to add child node to parent NODE  2/2
+# my $XML = XML::Smart->new("<cruds></cruds>");
+# my $node = XML::Smart->new();
+# $node->{crud}->{mask}->content(0, "peer");
+# $node->{crud}->{master}->content(0, "master");
+# push(@{$XML->{cruds}->{crud}}, $node->cut_root->pointer);
+# push(@{$XML->{cruds}->{crud}}, $node->cut_root->pointer);
 # print Dumper($XML->data);
-##
-## how to add new node
-#  my $XML = XML::Smart->new("<cruds></cruds>");
-#  my $node = XML::Smart->new();
-#  $node->{crud}->{mask}->content(0, "peer");
-#  $node->{crud}->{master}->content(0, "master");
-#  push(@{$XML->{cruds}->{crud}}, $node->cut_root->pointer);
-#  push(@{$XML->{cruds}->{crud}}, $node->cut_root->pointer);
+# exit(0);
+#
+#### how to remove node from parent NODE
+#  my $XML = XML::Smart->new("<configuration><cruds></cruds></configuration>");
+#  $XML->{configuration}->{cruds} = ();
 #  print Dumper($XML->data);
-#  # how to remove root node
-#  my @empty=();
-#  $XML->{cruds} = \@empty;
+#  exit(0);
+#### how to empty nodes from parent NODE
+#  my $XML = XML::Smart->new("<configuration><cruds></cruds></configuration>");
+#  $XML->{configuration}->{cruds} = {};
 #  print Dumper($XML->data);
-#  # how to reset node
-#  $XML->{cruds} = {};
+#  exit(0);
+#
+### how to replace nodes within parent NODE
+#  my $XML = XML::Smart->new("<configuration><cruds><crud><mask>placeholder</mask></crud></cruds></configuration>");
+#  my $nodes = XML::Smart->new("<cruds><crud><mask>master</mask><master>cg-master</master></crud></cruds>");
+#  $XML->{configuration}->{cruds} = $nodes->{cruds};
 #  print Dumper($XML->data);
-##
+#  exit(0);
+#
 my $root = $0;
 $root =~ s/\/[\w\.-]+$//;
 $root =~ s/\/[\w\.-]+$//;
@@ -71,7 +98,7 @@ foreach(@ARGV){
 
 sub usage {
     print "Usage: \n";
-    print "   conf-cli [OPTIONS] [--list] [--save] 【--out] [--dump]\n";
+    print "   conf-cli [OPTIONS] [--list] [--save] [--dump]\n";
     print "   conf-cli list -t -c\n";
     print "OPTIONS:\n";
     print "   conf-cli table reset\n";
@@ -251,10 +278,9 @@ my $OUTPUT = XML::Smart->new($output_exitst ? $output : "<cruds></cruds>");
 
 ##
 sub get_cruds_node{
-    if($save){
-        return $XML->{project}{build}{plugins}{plugin}{configuration}{cruds};
-    }
-    ## for out and for test
+    ##return $XML->{project}{build}{plugins}{plugin}{configuration}{cruds};
+
+    ## user cruds.xml for config
     return $OUTPUT->{cruds};
 }
 
@@ -419,16 +445,20 @@ if($dump){
 ## get or chng server port
 ##$connector->{port} = $server_port;
 print "\n##############################################\n";
-print Dumper($XML->data);
+#print Dumper($XML->data);
+#use cruds.xml for config
+print Dumper($OUTPUT->data);
 print "\n##############################################\n";
 }
 if($save){
+    ## save cruds.xml first
+    $OUTPUT->save($output);
+
+    ## update into XML
+    my $configuration =  $XML->{project}{build}{plugins}{plugin}{configuration};
+    $configuration->{cruds} = $OUTPUT->{cruds};
     $XML->save($pom);
 }
-if($out){
-    $OUTPUT->save($output);
-}
-
 
 ########################################
 ## Table Domain
@@ -554,15 +584,12 @@ sub crud_list {
 }
 
 sub crud_reset {
-    if($save){
-       my $configuration =  $XML->{project}{build}{plugins}{plugin}{configuration};
-       my @empty=();
-       $configuration->{cruds} = \@empty;
-    }
+    # my $configuration =  $XML->{project}{build}{plugins}{plugin}{configuration};
+    # my @empty=();
+    # $configuration->{cruds} = \@empty;
     
-    if($out){
-       $OUTPUT->{cruds} = {};
-    }
+    ## only reset cruds.xml
+    $OUTPUT->{cruds} = {};
 }
 
 sub crud_add_one {
