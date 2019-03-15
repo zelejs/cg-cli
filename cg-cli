@@ -541,13 +541,18 @@ dbsanity() {
 dbrunsql(){
    schemasql=$1
 
-   ### run sql file
-   if [ -e  "$schemasql" ];then
-      ## run all sql files
+   if [ ! $schemasql ];then
+       ## run all sql files
       for sql in $(ls src/main/resources/sql/*.sql);do
          echo $sql
          $dir/mysql-test/bin/mysql-test $url $sql
       done
+      exit
+   fi
+
+   ### run sql file
+   if [ -e  "$schemasql" ];then
+      $dir/mysql-test/bin/mysql-test $url $schemasql
       exit
    fi
 
