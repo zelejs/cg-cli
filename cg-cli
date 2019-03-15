@@ -539,24 +539,36 @@ dbsanity() {
 }
 
 dbrunsql(){
-    schemasql=$1
+   schemasql=$1
+
+   ### run sql file
+   if [ -e  "$schemasql" ];then
+      ## run all sql files
+      for sql in $(ls src/main/resources/sql/*.sql);do
+         echo $sql
+         $dir/mysql-test/bin/mysql-test $url $sql
+      done
+      exit
+   fi
 
     ## if user schema sql, check exists
-    if [ $schemasql ];then
-       if [ ! -e  $schemasql ];then
-           echo "schema sql $schemasql not found!"
-           exit
-       fi
+   if [ "$schemasql" ];then
+      if [[ $schemasql == SELECT* ]] || [[ $schemasql == select* ]] || 
+         [[ $schemasql =~ INSERT* ]] || [[ $schemasql == insert* ]] || 
+         [[ $schemasql =~ UPDATE* ]] || [[ $schemasql == update* ]] || 
+         [[ $schemasql =~ DELETE* ]] || [[ $schemasql == delete* ]] || 
+         [[ $schemasql =~ SHOW* ]]   || [[ $schemasql == show* ]]
+      then
+           echo $schemasql > /dev/null
+      else
+          echo "Not support sql: $schemasql"
+          exit
+      fi
 
-       $dir/mysql-test/bin/mysql-test $url $schemasql
-       exit  ## end
-    fi
-
-    ## run all sql files
-    for sql in $(ls src/main/resources/sql/*.sql);do
-       echo $sql
-       $dir/mysql-test/bin/mysql-test $url $sql
-    done
+      ## run sql
+      $dir/mysql-test/bin/mysql-test $url "$schemasql"
+      exit
+   fi
 }
 
 yamlrunsql(){
@@ -717,7 +729,8 @@ elif [ "$cmd"x == "dbsanity"x ];then
 
 elif [ "$cmd"x == "dbrunsql"x ];then
     schema=$4
-    dbrunsql $schema
+    
+    dbrunsql "$schema"
 
 elif [ "$cmd"x == "dbshowtables"x ];then
    dbshowtables
