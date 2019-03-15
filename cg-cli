@@ -561,16 +561,14 @@ dbrunsql(){
 
 yamlrunsql(){
    url=$1
+
    ## for test database
    test=$2
-   
+
    if [ $test ];then
       url=$(echo $url | sed 's/\/[a-z]*\?/\/test\?/g')
       url=${url//\/test\?/\/$test\?}  ## create table with [[:nothing:]] ) 
    fi
-
-   echo $url
-   echo ''
 
    ## run all sql files
    for sql in $(ls src/main/resources/sql/*.sql);do
@@ -674,6 +672,16 @@ testinit(){
       #echo "rm -rf src/main/java/com/jfeat/am"
       rm -rf src/main/java/com/jfeat/am
    fi
+}
+
+
+yamlgeturl(){
+
+    YAMLCLI="perl -I$dir/local $dir/local/yaml-cli"
+
+    ## get active url from application.yml
+    url=$($YAMLCLI get active url);
+    echo $url;
 }
 
 gen() {
@@ -1027,21 +1035,26 @@ elif [ "$cmd"x == "crudinitializetable"x ];then
    # gen persistance
    crudinitializetable
 elif [ "$cmd"x == "yamlgeturl"x ];then
-    YAMLCLI="perl -I$dir/local $dir/local/yaml-cli"
-
-    ## get active url from application.yml
-    url=$($YAMLCLI get active url);
-
-    echo $url;
+     yamlgeturl
 
 elif [ "$cmd"x == "yamlrunsql"x ];then
     YAMLCLI="perl -I$dir/local $dir/local/yaml-cli"
 
+            ## for test database
+    test=$4
+
     ## get active url from application.yml
     url=$($YAMLCLI get active url);
 
-    ## for test database
-    test=$4
+    ## check yaml not exists
+    num=0
+    for i in $url;do 
+      num=$[num+1]
+    done
+    if [ $num -gt 1 ];then
+       echo ok $url
+       exit
+    fi
 
     yamlrunsql $url $test
 
