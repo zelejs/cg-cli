@@ -9,6 +9,7 @@
         "handlebars": "^4.0.11"
     },
     "bin": {
-        "cg-cli": "./cg-cli"
+        "cg-cli": "./cg-cli",
+        "remote": "./remote"
     }
 }
