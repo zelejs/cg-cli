@@ -541,7 +541,7 @@ dbsanity() {
 dbrunsql(){
    schemasql=$1
 
-   if [ ! $schemasql ];then
+   if [ ! "$schemasql" ];then
        ## run all sql files
       for sql in $(ls src/main/resources/sql/*.sql);do
          echo $sql
@@ -556,7 +556,7 @@ dbrunsql(){
       exit
    fi
 
-    ## if user schema sql, check exists
+   ## if user schema sql, check exists
    if [ "$schemasql" ];then
       if [[ $schemasql == SELECT* ]] || [[ $schemasql == select* ]] || 
          [[ $schemasql =~ INSERT* ]] || [[ $schemasql == insert* ]] || 
