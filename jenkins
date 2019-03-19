@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+cmd=$1
+
+if [ ! $cmd ];then
+   echo "Usage: jenkins <cmd>"
+   echo " deploy  -- deploy to jenkins server"
+   exit
+fi
+
+
+if [[ $cmd == deploy ]];then
+    if [ ! -e pom.xml ];then
+        echo "pom.xml not exists"
+        exit
+    fi
+
+    cmd=cmddeploy
+fi
+
+
+### start ###
+dir=$(readlink -f $0)
+dir=$(dirname $dir)
+POM_CLI="perl -I$dir/local $dir/local/pom-cli"
+
+
+## deploy
+cmddeploy() {
+    groupId=$($POM_CLI get groupId)
+    groupId=${groupId/\./\/}
+    artifactId=$($POM_CLI get artifactId)
+    version=$($POM_CLI get version)
+
+    jar="target/$artifactId-$version.jar"
+    
+    ## start deploy
+    if [ ! -e $jar ];then
+       mvn clean deploy
+    fi
+    
+    if [ -e $jar ];then
+        ## echo jar
+        echo $jar
+
+        echo "ssh rm $artifactId from jenkins server..."
+        ssh -i $dir/assets/ssh/use-ci-jenkins-deploy.pem ci@zele.pro "ls /home/ci/.m2/repository/$groupId | grep $groupId;rm -rf /home/ci/.m2/repository/$groupId/$artifactId"
+        echo 'done.'
+    fi
+}
+
+
+## main
+if [[ $cmd == cmddeploy ]];then
+   cmddeploy
+fi

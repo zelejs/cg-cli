@@ -1,0 +1,43 @@
+#!/usr/bin/env perl
+use lib qw(local);
+use XML::Smart;
+use Data::Dumper;
+
+sub usage {
+    print "Usage: pom-cli get groupId\n";
+    print "       pom-cli get artifactId\n";
+    print "       pom-cli get version\n";
+}
+
+my $cmd = shift @ARGV;
+
+## POM.XML node
+my $POM = 'pom.xml';
+my $XML = XML::Smart->new($POM);
+
+if($cmd =~ get){
+    my $arg2 = shift @ARGV;
+    my $arg3 = shift @ARGV;
+    
+    $cmd = "$cmd$arg2$arg3";
+
+    if($cmd =~ /getgroupId/){
+        my $ref = $XML->{project}->{groupId}->pointer_ok;
+        print $ref->{CONTENT};
+
+    }elsif($cmd =~ /getartifactId/){
+        my $ref = $XML->{project}->{artifactId}->pointer_ok;
+        print $ref->{CONTENT};
+
+    }elsif($cmd =~ /getversion/){
+        my $ref = $XML->{project}->{version}->pointer_ok;
+        print $ref->{CONTENT};
+
+    }else{
+        usage();
+        exit(0);
+    }
+}else{
+    usage();
+    exit(0);
+}
