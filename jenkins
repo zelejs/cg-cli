@@ -1,20 +1,42 @@
 #!/usr/bin/env bash
 cmd=$1
 
+usage() {
+    echo "Usage: jenkins deploy clean m2"
+    echo "       jenkins deploy upload jar <link>"
+    echo "       jenkins show link <link>"
+    exit
+}
+
 if [ ! $cmd ];then
-   echo "Usage: jenkins <cmd>"
-   echo " deploy  -- deploy to jenkins server"
-   exit
+   usage
 fi
 
 
-if [[ $cmd == deploy ]];then
-    if [ ! -e pom.xml ];then
-        echo "pom.xml not exists"
-        exit
-    fi
+cmd2=$1$2
+cmd3=$1$2$3
 
-    cmd=cmddeploy
+
+if [ ! -e pom.xml ];then
+    echo "pom.xml not exists"
+    exit
+fi
+
+if [[ $cmd2 == showlink ]];then
+    cmd=cmdshowlink
+
+elif [[ $cmd3 == deploycleanm2 ]];then
+    cmd=cmddeploycleanm2
+
+elif [[ $cmd3 == deployuploadjar ]];then
+    link=$4
+    if [ ! $link ];then
+       usage
+    fi
+  
+    cmd=cmddeployuploadjar
+else 
+    usage
 fi
 
 
@@ -22,25 +44,25 @@ fi
 dir=$(readlink -f $0)
 dir=$(dirname $dir)
 POM_CLI="perl -I$dir/local $dir/local/pom-cli"
-
-
-## deploy
-cmddeploy() {
+JAR='/mnt/tools/java/bin/jar'
+    
     groupId=$($POM_CLI get groupId)
     groupId=${groupId/\./\/}
     artifactId=$($POM_CLI get artifactId)
     version=$($POM_CLI get version)
+    jar="$artifactId-$version.jar"
 
-    jar="target/$artifactId-$version.jar"
-    
+
+## deploy to clean m2
+deploycleanm2() {
     ## start deploy
-    if [ ! -e $jar ];then
+    if [ ! -e target/$jar ];then
        mvn clean install deploy
     fi
     
-    if [ -e $jar ];then
+    if [ -e target/$jar ];then
         ## echo jar
-        echo $jar
+        echo target/$jar
 
         echo "check installed $artifactId on jenkins server.."
         lib=$(ssh -i $dir/assets/ssh/use-ci-jenkins-deploy.pem ci@zele.pro "ls /home/ci/.m2/repository/$groupId | grep $artifactId")
@@ -57,8 +79,64 @@ cmddeploy() {
 }
 
 
+deployuploadjar(){
+    if [ ! -e target/$jar ];then
+        echo target/$jar not exists
+        exit
+    fi
+
+    link=$1
+
+    ## find the standalone jar
+    #echo "find standalone package on jenkin /home/ci/link/$link .."
+    standalone=$(ssh -i $dir/assets/ssh/use-ci-jenkins-deploy.pem ci@zele.pro "cd /home/ci/link/$link && ls *-standalone.jar")
+    if [ ! $standalone ];then
+        echo "no standalone jar found !"
+        exit
+    fi
+    echo "=>standalone jar: /home/ci/link/$link/$standalone"
+
+
+    ## check if standalone contains current jar
+    echo "=>check if $standalone contains $jar .."
+    jarok=$(ssh -i $dir/assets/ssh/use-ci-jenkins-deploy.pem ci@zele.pro "cd /home/ci/link/$link && $JAR tf $standalone | grep $jar")
+    if [ ! $jarok ];then
+         echo "$standalone does not contains $jar"
+         exit
+    fi
+    echo "=>$jarok"
+
+
+    #cp jar to link
+    echo "=>scp target/$jar ci@zele.pro:/home/ci/link/$link/$jardir"
+    jardir=$(dirname $jarok)
+    ssh -i $dir/assets/ssh/use-ci-jenkins-deploy.pem ci@zele.pro "cd /home/ci/link/$link && mkdir -p $jardir"
+    scp -i $dir/assets/ssh/use-ci-jenkins-deploy.pem target/$jar ci@zele.pro:/home/ci/link/$link/$jardir
+
+    ## do jar 0uf
+    ##ssh -i $dir/assets/ssh/use-ci-jenkins-deploy.pem ci@zele.pro "ls /home/ci/link/$link/$jardir"
+    echo "=>jar 0uf $standalone $jarok"
+    jarroot=${jardir%%\/*}  ## remove all after /
+    ssh -i $dir/assets/ssh/use-ci-jenkins-deploy.pem ci@zele.pro "cd /home/ci/link/$link && $JAR 0uf $standalone $jarok && rm -rf $jarroot && ls -l"
+    echo 'Done.'
+}
+
+
+showlink(){
+    link=$1
+    echo "ssh -i $dir/assets/ssh/use-ci-jenkins-deploy.pem ci@zele.pro \"ls /home/ci/link/$link\""
+    ssh -i $dir/assets/ssh/use-ci-jenkins-deploy.pem ci@zele.pro "ls /home/ci/link/$link"
+}
+
+
 ## main
-if [[ $cmd == cmddeploy ]];then
-   cmddeploy
+if [[ $cmd == cmddeploycleanm2 ]];then
+    deploycleanm2
+elif [[ $cmd == cmddeployuploadjar ]];then
+    link=$4
+    deployuploadjar $link
+elif [[ $cmd == cmdshowlink ]];then
+    link=$3
+    showlink $link
 fi
 
