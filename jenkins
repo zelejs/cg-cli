@@ -42,9 +42,17 @@ cmddeploy() {
         ## echo jar
         echo $jar
 
-        echo "ssh rm $artifactId from jenkins server..."
-        ssh -i $dir/assets/ssh/use-ci-jenkins-deploy.pem ci@zele.pro "ls /home/ci/.m2/repository/$groupId | grep $groupId;rm -rf /home/ci/.m2/repository/$groupId/$artifactId"
-        echo 'done.'
+        echo "check installed $artifactId on jenkins server.."
+        lib=$(ssh -i $dir/assets/ssh/use-ci-jenkins-deploy.pem ci@zele.pro "ls /home/ci/.m2/repository/$groupId | grep $artifactId")
+        
+        if [ $lib ];then
+            echo "rm $artifactId from jenkins server.."
+            ssh -i $dir/assets/ssh/use-ci-jenkins-deploy.pem ci@zele.pro "rm -rf /home/ci/.m2/repository/$groupId/$artifactId"
+        else
+            echo Not found!
+        fi
+
+        echo Done.
     fi
 }
 
@@ -53,3 +61,5 @@ cmddeploy() {
 if [[ $cmd == cmddeploy ]];then
    cmddeploy
 fi
+
+
