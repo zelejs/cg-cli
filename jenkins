@@ -35,7 +35,7 @@ cmddeploy() {
     
     ## start deploy
     if [ ! -e $jar ];then
-       mvn clean deploy
+       mvn clean install deploy
     fi
     
     if [ -e $jar ];then
@@ -61,5 +61,4 @@ cmddeploy() {
 if [[ $cmd == cmddeploy ]];then
    cmddeploy
 fi
-
 
