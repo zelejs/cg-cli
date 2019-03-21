@@ -6,7 +6,7 @@ usage() {
     echo "       jenkins show link <link>"
     echo "       jenkins deploy upload jar <link>"
     echo "       jenkins deploy pull lib <link> <lib>"
-    echo "       jenkins deploy pull lib <link> show"
+    echo "       jenkins deploy show lib <link>"
     echo "       jenkins deploy lib <BOOT-INF>"
     exit
 }
@@ -21,14 +21,6 @@ cmd3=$1$2$3
 
 if [[ $cmd2 == showlink ]];then
     cmd=cmdshowlink
-
-elif [[ $cmd2 == deploylib ]];then
-    BOOT_INF=$3
-    if [ ! $BOOT_INF ];then
-       usage
-    fi
-
-    cmd=cmddeploylib
 
 elif [[ $cmd3 == deploycleanm2 ]];then
     cmd=cmddeploycleanm2
@@ -54,11 +46,19 @@ elif [[ $cmd3 == deploypulllib ]];then
        usage
     fi
 
-    if [[ $lib == show ]];then
-       cmd=cmddeploypulllibshow
-    else
-       cmd=cmddeploypulllib   
+    cmd=cmddeploypulllib
+
+elif [[ $cmd3 == deployshowlib ]];then
+    link=$3
+    if [ ! $link ];then
+        usage
     fi
+
+    cmd=cmddeployshowlib
+    
+elif [[ $cmd2 == deploylib ]];then
+    cmd=cmddeploylib
+
 else 
     usage
 fi
@@ -195,7 +195,7 @@ deploypulllib(){
     find $libroot
 }
 
-deploypulllibshow(){
+deployshowlib(){
     link=$1
 
     ## find the standalone jar
@@ -210,21 +210,79 @@ deploypulllibshow(){
 }
 
 deploylib(){
+    ################################
+    # export JENKINS_LINK='mall-api'
+    # export STANDALONE='mall-api-pack-1.0.0-standalone.jar'
+    ################################
     BOOT_INF=$1
+
+    ## just list the BOOT-INF dir if no param input
     if [ ! $BOOT_INF ];then
-        echo $BOOT_INF not exists
+        if [ -d BOOT-INF ];then
+            find BOOT-INF
+            exit
+        fi
+    fi
+
+    ## check args
+    if [ ! $BOOT_INF ];then
+        echo 'Usage: deploy_lib.sh <BOOT-INF>'
         exit
     fi
 
-    ## find standalone 
-    standalone=$(ls *-standalone.jar)
+    ## check if lib exists
+    if [[ $BOOT_INF == BOOT-INF* ]];then
+        if [ ! -e $BOOT_INF ];then
+            echo $BOOT_INF not exists
+            exit
+        fi
+        if [ -d $BOOT_INF ];then
+           echo .jar type of file is required
+           find BOOT-INF
+           exit
+        fi
+    else
+       echo "$BOOT_INF is not located in BOOT-INF !"
+       exit
+    fi
+
+
+    ## find standalone if env STANDALONE is not set
+    standalone=${STANDALONE} 
     if [ ! $standalone ];then
-        echo "no standalone jar found !"
+        standalone=$(ls *-standalone.jar)
+        if [ ! $standalone ];then
+            echo "no standalone jar found !"
+            exit
+        fi
+    fi
+
+    ## start pull the lib
+    lib=${BOOT_INF//BOOT-INF\/lib/}  ## cut BOOT-INF/lib, only jar
+    ## no BOOT-INF dir found, pull it down
+    if [ ! -d BOOT-INF ];then
+        if [ $lib ];then
+            if [ ! ${JENKINS_LINK} ];then
+                link=${PWD};link=${link//\/build/};link=$(basename $link)
+                echo "export JENKINS_LINK is required !"
+                echo "export JENKINS_LINK='$link'"
+                exit
+            fi
+            echo "=>jenkins deploy pull lib ${JENKINS_LINK} $lib"
+            jenkins deploy pull lib ${JENKINS_LINK} $lib
+        fi
+    fi
+
+    ## check if jenkins pull is successful
+    if [ ! -e $BOOT_INF ];then
+        echo "fail to pull $lib from jenkins !"
         exit
     fi
 
-    echo "--"
+    #backup rollback $standalone
+    echo "cp $standalone $standalone.rollback_$(date "+%m-%d")"
     echo "jar 0uf $standalone $BOOT_INF"
+    echo "sh setup.sh"
 }
 
 ## main
@@ -240,14 +298,12 @@ elif [[ $cmd == cmddeploypulllib ]];then
     link=$4
     lib=$5
     deploypulllib $link $lib
-elif [[ $cmd == cmddeploypulllibshow ]];then
+elif [[ $cmd == cmddeployshowlib ]];then
     link=$4
-    deploypulllibshow $link
-
+    deployshowlib $link
 elif [[ $cmd == cmddeploylib ]];then
     BOOT_INF=$3
     deploylib $BOOT_INF
-
 else 
     echo Unknown cmd: $cmd
 fi
