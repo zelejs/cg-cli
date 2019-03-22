@@ -18,21 +18,20 @@ fi
 cmd2=$1$2
 cmd3=$1$2$3
 
-
 if [[ $cmd2 == showlink ]];then
     cmd=cmdshowlink
 
-elif [[ $cmd3 == cleanm2 ]];then
+elif [[ $cmd2 == cleanm2 ]];then
     cmd=cmdcleanm2
 
-elif [[ $cmd3 == uploadjar ]];then
+elif [[ $cmd2 == uploadjar ]];then
 
     if [ ! -e pom.xml ];then
         echo "pom.xml not exists"
         exit
     fi
 
-    link=$4
+    link=$3
     if [ ! $link ];then
        usage
     fi
@@ -84,6 +83,7 @@ cleanm2() {
         artifactId=$($POM_CLI get artifactId)
         version=$($POM_CLI get version)
         jar="$artifactId-$version.jar"
+        echo groupId=$groupId, artifactId=$artifactId, version=$version
 
     ## start deploy
     if [ ! -e target/$jar ];then
@@ -98,7 +98,7 @@ cleanm2() {
         lib=$(ssh -i $PEM ci@zele.pro "ls /home/ci/.m2/repository/$groupId | grep $artifactId")
         
         if [ $lib ];then
-            echo "rm $artifactId from jenkins server.."
+            echo "rm $lib from jenkins server.."
             ssh -i $PEM ci@zele.pro "rm -rf /home/ci/.m2/repository/$groupId/$artifactId"
         else
             echo Not found!
@@ -292,7 +292,7 @@ elif [[ $cmd == cmdshowlink ]];then
     link=$3
     showlink $link
 elif [[ $cmd == cmduploadjar ]];then
-    link=$4
+    link=$3
     uploadjar $link
 elif [[ $cmd == cmddeploypulllib ]];then
     link=$4
