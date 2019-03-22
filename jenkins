@@ -308,3 +308,41 @@ else
     echo Unknown cmd: $cmd
 fi
 
+
+################################################
+##  agent scripts
+################################################
+deploy_lib() {
+    export STANDALONE='mall-api-pack-1.0.0-standalone.jar'
+    export JENKINS_LINK='mall-api'
+
+    lib=$1
+
+    ## nothing,no BOOT-INF dir
+    if [ ! -d BOOT-INF ];then
+        if [ ! $lib ];then
+            echo '=>BOOT-INF not exists, first pull the lib ..'
+            echo "deploy-cli.sh <lib>"
+        else
+            echo "=>jenkins deploy pull lib $JENKINS_LINK $lib"
+            jenkins deploy pull lib $JENKINS_LINK $lib
+        fi
+        exit
+    fi
+
+    BOOT_INF=$1
+    if [ ! $BOOT_INF ];then
+        echo 'Usage: deploy-lib.sh <BOOT-INF>'
+        exit
+    fi
+
+    ## jenkins will check INPUT existance
+    jenkins deploy lib $BOOT_INF
+
+    if [ $BOOT_INF ];then
+        if [ -d BOOT-INF ];then
+            echo '=>Clean BOOT-INF after deploy'
+            echo 'rm -rf BOOT-INF'
+        fi
+    fi
+}
