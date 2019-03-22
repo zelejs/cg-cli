@@ -2,9 +2,9 @@
 cmd=$1
 
 usage() {
-    echo "Usage: jenkins deploy clean m2"
+    echo "Usage: jenkins clean m2"
     echo "       jenkins show link <link>"
-    echo "       jenkins deploy upload jar <link>"
+    echo "       jenkins upload jar <link>"
     echo "       jenkins deploy pull lib <link> <lib>"
     echo "       jenkins deploy show lib <link>"
     echo "       jenkins deploy lib <BOOT-INF>"
@@ -22,10 +22,10 @@ cmd3=$1$2$3
 if [[ $cmd2 == showlink ]];then
     cmd=cmdshowlink
 
-elif [[ $cmd3 == deploycleanm2 ]];then
-    cmd=cmddeploycleanm2
+elif [[ $cmd3 == cleanm2 ]];then
+    cmd=cmdcleanm2
 
-elif [[ $cmd3 == deployuploadjar ]];then
+elif [[ $cmd3 == uploadjar ]];then
 
     if [ ! -e pom.xml ];then
         echo "pom.xml not exists"
@@ -37,7 +37,7 @@ elif [[ $cmd3 == deployuploadjar ]];then
        usage
     fi
   
-    cmd=cmddeployuploadjar
+    cmd=cmduploadjar
 
 elif [[ $cmd3 == deploypulllib ]];then
     link=$4
@@ -77,7 +77,7 @@ showlink(){
 }
 
 ## deploy to clean m2
-deploycleanm2() {
+cleanm2() {
     POM_CLI="perl -I$dir/local $dir/local/pom-cli"
         groupId=$($POM_CLI get groupId)
         groupId=${groupId/\./\/}
@@ -109,7 +109,7 @@ deploycleanm2() {
 }
 
 
-deployuploadjar(){
+uploadjar(){
     POM_CLI="perl -I$dir/local $dir/local/pom-cli"
         groupId=$($POM_CLI get groupId)
         groupId=${groupId/\./\/}
@@ -286,14 +286,14 @@ deploylib(){
 }
 
 ## main
-if [[ $cmd == cmddeploycleanm2 ]];then
-    deploycleanm2
+if [[ $cmd == cmdcleanm2 ]];then
+    cleanm2
 elif [[ $cmd == cmdshowlink ]];then
     link=$3
     showlink $link
-elif [[ $cmd == cmddeployuploadjar ]];then
+elif [[ $cmd == cmduploadjar ]];then
     link=$4
-    deployuploadjar $link
+    uploadjar $link
 elif [[ $cmd == cmddeploypulllib ]];then
     link=$4
     lib=$5

@@ -87,9 +87,19 @@ if($cmd eq "xfr"){
 }elsif($cmd eq 'mirror'){
    chdir $dir;
    my $mirror_repo = $param;
+
    if(!($mirror_repo)){
-      $mirror_repo= `cat .mirror`;
-      $mirror_repo=~s/[\r\n\t\s]+$//; 
+      if(-f ".mirror"){
+         $mirror_repo= `cat .mirror`;
+         $mirror_repo=~s/[\r\n\t\s]+$//; 
+      }
+   }
+   if(!($mirror_repo)){
+      my $local_repo = get_local_repo();
+      $local_repo =~ /\/([\w\.\-_]+)$/;
+
+      $mirror_repo="devops\@zele.pro:/home/devops/mirror/$1";
+      print "mirror: $mirror_repo\n";
    }
 
    if(!($mirror_repo)){
@@ -106,7 +116,7 @@ if($cmd eq "xfr"){
    print `git push origin master`;
    print "git remote set-url origin $local_repo\n";
    print `git remote set-url origin $local_repo`;
-
+   print "\n";
    print '## '.get_local_repo()." ##\n";
 
 
