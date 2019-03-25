@@ -8,7 +8,7 @@ usage() {
   echo "    cg-cli db get url"
   echo "    cg-cli db set url <database> [localhost] [3306] [root] [root]"
   echo "    cg-cli db sanity"
-  echo "    cg-cli db run sql [/path/to/schema.sql]"
+  echo "    cg-cli db run sql [/path/to/schema.sql] [param] ..."
   echo "    cg-cli db show tables"
   echo "    cg-cli db show create table <table-name>"
   echo "    cg-cli crud reset"
@@ -54,7 +54,6 @@ usage_crud() {
 usage_test() {
   echo "Usage:"
   echo "    cg-cli [OPTIONS] --help --gen"
-  echo "    cg-cli test run sql [/path/to/schema.sql]"
   echo "    cg-cli test crud one"
   echo "    cg-cli test crud onemany"
   echo "    cg-cli test crud onemany x2"
@@ -272,14 +271,7 @@ elif [ "$cmd"x == "crud"x ];then
    fi
 
 elif [ "$cmd"x == "test"x ];then
-   if [ "$2"x == "run"x ];then 
-      if [ ! $3 ];then
-         usage
-         exit
-      fi
-      cmd=testrunsql
-
-   elif [  "$2"x == "crud"x ];then 
+   if [  "$2"x == "crud"x ];then 
        if [ "$3"x == "one"x ];then
             cmd=testcrudone
        elif [ "$3"x == "onemany"x ];then
@@ -540,6 +532,9 @@ dbsanity() {
 
 dbrunsql(){
    schemasql=$1
+   param1=$2
+   param2=$3
+   param3=$4
 
    if [ ! "$schemasql" ];then
        ## run all sql files
@@ -552,9 +547,10 @@ dbrunsql(){
 
    ### run sql file
    if [ -e  "$schemasql" ];then
-      $dir/mysql-test/bin/mysql-test $url $schemasql
+      $dir/mysql-test/bin/mysql-test $url $schemasql $param1 $param2 $param3
       exit
    fi
+   
 
    ## if user schema sql, check exists
    if [ "$schemasql" ];then
@@ -734,8 +730,11 @@ elif [ "$cmd"x == "dbsanity"x ];then
 
 elif [ "$cmd"x == "dbrunsql"x ];then
     schema=$4
-    
-    dbrunsql "$schema"
+    param1=$5
+    param2=$6
+    param3=$7
+
+    dbrunsql "$schema" $param1 $param2 $param3
 
 elif [ "$cmd"x == "dbshowtables"x ];then
    dbshowtables
