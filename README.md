@@ -4,12 +4,11 @@
 $ npm i -g 
 
 ## Usage
-
     cg-cli [OPTIONS] --help --gen
     cg-cli module get
     cg-cli module set <module-name> [parent-module]
-    cg-cli db get config
-    cg-cli db set config <database> [localhost] [3306] [root] [root]
+    cg-cli db get url
+    cg-cli db set url <database> [localhost] [3306] [root] [root]
     cg-cli db sanity
     cg-cli db run sql [/path/to/schema.sql]
     cg-cli db show tables
@@ -29,3 +28,6 @@ $ npm i -g
     cg-cli test crud group
     cg-cli test crud groupby
     cg-cli test crud groupby field
+    cg-cli yaml get url
+    cg-cli yaml run sql [test]
+    cg-cli yaml show create tables
