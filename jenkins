@@ -8,6 +8,7 @@ usage() {
     echo "       jenkins pull lib <link> <lib>"
     echo "       jenkins show lib <link>"
     echo "       jenkins deploy lib <BOOT-INF>"
+    echo "       jenkins deploy class <class> [container]"
     exit
 }
 
@@ -56,6 +57,9 @@ elif [[ $cmd2 == showlib ]];then
     
 elif [[ $cmd2 == deploylib ]];then
     cmd=cmddeploylib
+
+elif [[ $cmd2 == deployclass ]];then
+    cmd=cmddeployclass
 
 else 
     usage
@@ -155,7 +159,7 @@ uploadjar(){
     echo "=>jar 0uf $standalone $jarok"
     #jarroot=${jardir%%\/*}  ## get ONLY the BOOT-INT
     jarroot='BOOT-INT';
-    ssh -i $PEM ci@zele.pro "cd /home/ci/link/$link && $JAR 0uf $standalone $jarok && rm -rf $jarroot && ls -l"
+    ssh -i $PEM ci@zele.pro "cd /home/ci/link/$link && $JAR 0uf $standalone $jarok && rm -rf $jardir/$jarroot && ls -l"
     echo 'Done.'
 }
 
@@ -314,6 +318,57 @@ deploylib(){
 }
 
 
+deployclass() {
+    class=$1
+    container=$2
+
+    if [ ! -d BOOT-INF ];then
+       echo BOOT-INF not exists
+       exit
+    fi
+
+    ## find the lib
+    libok=$(find BOOT-INF -name "*.jar")
+    if [ ! $libok ];then
+        echo no deploy lib found !
+        exit 
+    fi
+
+    classok=$(jar tf $libok | grep -i $class)
+
+    ## get how many class
+    i=0
+    for cls in $classok;do
+       i=$(($i+1))
+    done
+    ## if no match
+    if [ $i -eq 0 ];then
+        echo no match class found !
+        exit
+    fi
+    ## if more thean 1
+    if [ $i -gt 1 ];then
+        for cls in $classok;do
+            echo $cls
+        done
+        exit
+    fi
+    
+    jar xf $libok $classok
+
+    if [ -f $classok ];then
+       ls $classok
+    fi
+
+    ## cp to docker 
+    if [ $container ];then
+       docker cp $classok $container:/
+       rm -rf BOOT_INF
+       rm -f $classok
+    fi
+}
+
+
 ## main
 if [[ $cmd == cmdcleanm2 ]];then
     cleanm2
@@ -333,6 +388,10 @@ elif [[ $cmd == cmdshowlib ]];then
 elif [[ $cmd == cmddeploylib ]];then
     BOOT_INF=$3
     deploylib $BOOT_INF
+elif [[ $cmd == cmddeployclass ]];then
+    CLASS=$3
+    CONTAINER=$4
+    deployclass $CLASS $CONTAINER
 else 
     echo Unknown cmd: $cmd
 fi
