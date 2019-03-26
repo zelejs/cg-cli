@@ -354,17 +354,30 @@ deployclass() {
         exit
     fi
     
-    jar xf $libok $classok
+    if [ ! -f $classok ];then
+       echo "=>jar xf $libok $classok"
+       jar xf $libok $classok
+    fi
 
     if [ -f $classok ];then
+       echo "=>ls $classok"
        ls $classok
     fi
 
     ## cp to docker 
     if [ $container ];then
+       echo "=>docker cp $classok $container:/"
        docker cp $classok $container:/
-       rm -rf BOOT_INF
-       rm -f $classok
+       echo "=>rm -rf BOOT_INF && rm -f $classok"
+       rm -rf BOOT_INF && rm -f $classok
+       
+       ## steps
+       echo ''
+       echo ACTION
+       echo --
+       echo "docker exec -it $container bash"
+       echo 'java -jar arthas-boot.jar'
+       echo "redefine /$(basename $classok)"
     fi
 }
 
