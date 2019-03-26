@@ -3,10 +3,10 @@ cmd=$1
 
 usage() {
     echo "Usage: jenkins clean m2"
-    echo "       jenkins show link <link>"
+    echo "       jenkins show link [link]"
     echo "       jenkins upload jar <link>"
-    echo "       jenkins deploy pull lib <link> <lib>"
-    echo "       jenkins deploy show lib <link>"
+    echo "       jenkins pull lib <link> <lib>"
+    echo "       jenkins show lib <link>"
     echo "       jenkins deploy lib <BOOT-INF>"
     exit
 }
@@ -16,7 +16,7 @@ if [ ! $cmd ];then
 fi
 
 cmd2=$1$2
-cmd3=$1$2$3
+#cmd3=$1$2$3
 
 if [[ $cmd2 == showlink ]];then
     cmd=cmdshowlink
@@ -25,7 +25,6 @@ elif [[ $cmd2 == cleanm2 ]];then
     cmd=cmdcleanm2
 
 elif [[ $cmd2 == uploadjar ]];then
-
     if [ ! -e pom.xml ];then
         echo "pom.xml not exists"
         exit
@@ -38,22 +37,22 @@ elif [[ $cmd2 == uploadjar ]];then
   
     cmd=cmduploadjar
 
-elif [[ $cmd3 == deploypulllib ]];then
-    link=$4
-    lib=$5
+elif [[ $cmd2 == pulllib ]];then
+    link=$3
+    lib=$4
     if [ ! $lib ];then
        usage
     fi
 
-    cmd=cmddeploypulllib
+    cmd=cmdpulllib
 
-elif [[ $cmd3 == deployshowlib ]];then
+elif [[ $cmd2 == showlib ]];then
     link=$3
     if [ ! $link ];then
         usage
     fi
 
-    cmd=cmddeployshowlib
+    cmd=cmdshowlib
     
 elif [[ $cmd2 == deploylib ]];then
     cmd=cmddeploylib
@@ -161,7 +160,7 @@ uploadjar(){
 }
 
 
-deploypulllib(){
+pulllib(){
     link=$1
     lib=$2
 
@@ -196,7 +195,7 @@ deploypulllib(){
     find $libroot
 }
 
-deployshowlib(){
+showlib(){
     link=$1
 
     ## find the standalone jar
@@ -235,8 +234,9 @@ deploylib(){
             echo '=>BOOT-INF not exists, first pull the lib ..'
             echo "deploy-cli.sh <lib>"
         else
-            echo "=>jenkins deploy pull lib $JENKINS_LINK $lib"
-            deploypulllib $JENKINS_LINK $lib
+            echo "=>jenkins pull lib $JENKINS_LINK $lib"
+            pulllib $JENKINS_LINK $lib
+            find BOOT-INF
         fi
         exit
     fi
@@ -295,8 +295,8 @@ deploylib(){
                 echo "export JENKINS_LINK='$link'"
                 exit
             fi
-            echo "=>jenkins deploy pull lib ${JENKINS_LINK} $lib"
-            jenkins deploy pull lib ${JENKINS_LINK} $lib
+            echo "=>jenkins pull lib ${JENKINS_LINK} $lib"
+            jenkins pull lib ${JENKINS_LINK} $lib
         fi
     fi
 
@@ -323,13 +323,13 @@ elif [[ $cmd == cmdshowlink ]];then
 elif [[ $cmd == cmduploadjar ]];then
     link=$3
     uploadjar $link
-elif [[ $cmd == cmddeploypulllib ]];then
-    link=$4
-    lib=$5
-    deploypulllib $link $lib
-elif [[ $cmd == cmddeployshowlib ]];then
-    link=$4
-    deployshowlib $link
+elif [[ $cmd == cmdpulllib ]];then
+    link=$3
+    lib=$4
+    pulllib $link $lib
+elif [[ $cmd == cmdshowlib ]];then
+    link=$3
+    showlib $link
 elif [[ $cmd == cmddeploylib ]];then
     BOOT_INF=$3
     deploylib $BOOT_INF
