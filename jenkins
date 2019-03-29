@@ -10,6 +10,8 @@ usage() {
     echo "       jenkins deploy lib <BOOT-INF>"
     echo "       jenkins deploy class <class> [container]"
     echo "       jenkins find class <jar> <lib> <class>"
+    echo "       jenkins local find jar <jar>"
+    echo "       jenkins local put jar <jar> <link>"
     exit
 }
 
@@ -18,7 +20,7 @@ if [ ! $cmd ];then
 fi
 
 cmd2=$1$2
-#cmd3=$1$2$3
+cmd3=$1$2$3
 
 if [[ $cmd2 == showlink ]];then
     cmd=cmdshowlink
@@ -69,10 +71,25 @@ elif [[ $cmd2 == findclass ]];then
     if [ ! $class ];then
         usage
     fi
-
     cmd=cmdfindclass
 
-else 
+elif [[ $cmd3 == localfindjar ]];then
+    jar=$4
+    if [ ! $jar ];then 
+       usage
+    fi
+    cmd=cmdlocalfindjar
+    
+elif [[ $cmd3 == localputjar ]];then
+    jar=$4
+    link=$5
+
+    if [ ! $link ];then 
+       usage
+    fi
+    cmd=cmdlocalputjar
+
+else
     usage
 fi
 
@@ -376,7 +393,7 @@ findclass() {
        echo no match class found !
        exit
    fi
-   ## if more thean 1
+   ## if more than 1
    if [ $i -gt 1 ];then
        for cls in $classok;do
            echo $cls
@@ -424,7 +441,7 @@ deployclass() {
         echo no match class found !
         exit
     fi
-    ## if more thean 1
+    ## if more than 1
     if [ $i -gt 1 ];then
         for cls in $classok;do
             echo $cls
@@ -459,6 +476,130 @@ deployclass() {
     fi
 }
 
+localfindjar() {
+   link=$1
+   links='/home/ci/.jenkins/workspace'
+   
+   ## not exists, just search
+   if [ ! -e $jar ];then
+      jarok=$(ls /home/ci/.jenkins/workspace | grep $jar)
+   fi 
+   ## check if ok
+   i=0
+   for jr in $jarok;do
+      i=$(($i+1))
+   done
+   ## if no match
+   if [ $i -eq 0 ];then
+       echo no match class found !
+       exit
+   fi
+   ## if more than 1
+   if [ $i -gt 1 ];then
+       for jr in $jarok;do
+           echo $jr
+       done
+       exit
+   fi
+   
+   ## got link
+   jarlink=$jarok
+
+   #continue to search
+   if [ ! -d $links/$jarok ];then
+      jar=$(basename $jar)
+      jarok=$(ls /home/ci/.jenkins/workspace/$jarlink/target | grep $jar)
+   fi
+
+   i=0
+   for jr in $jarok;do
+      i=$(($i+1))
+   done
+   ## if no match
+   if [ $i -eq 0 ];then
+       echo no match class found !
+       exit
+   fi
+   ## if more than 1
+   if [ $i -gt 1 ];then
+       for jr in $jarok;do
+           echo $jarlink/target/$jr
+       done
+       exit
+   fi
+
+   ## if exitst
+   if [ -d $links/$jarok ];then
+       cd $links
+       jarok=$(ls $jarok/target/*.jar)  
+   fi
+
+   i=0
+   for jr in $jarok;do
+      i=$(($i+1))
+   done
+   ## if no match
+   if [ $i -eq 0 ];then
+       echo no match class found !
+       exit
+   fi
+   ## if more than 1
+   if [ $i -gt 1 ];then
+       for jr in $jarok;do
+           echo $jarlink/target/$jr
+       done
+       exit
+   fi
+
+   #found the jar
+   echo $jarok
+}
+
+
+localputjar() {
+    jar=$1
+    link=$2
+    links='/home/ci/.jenkins/workspace'
+
+    if [ ! -f  $links/$jar ];then
+       echo $jar not exists in $links
+       exit
+    fi
+
+
+    ## find the standalone jar
+    #echo "find standalone package on jenkin /home/ci/link/$link .."
+    standalone=$(cd /home/ci/link/$link && ls *-standalone.jar)
+    if [ ! $standalone ];then
+        standalone=$(cd /home/ci/link/$link && ls *.war)
+    fi
+    if [ ! $standalone ];then
+        echo "no standalone jar found !"
+        exit
+    fi
+    echo "=>standalone jar: /home/ci/link/$link/$standalone"
+
+    ## check if standalone contains current jar
+    jarlib=$(basename $jar)
+    echo "=>check if $standalone contains $jar .."
+    jarok=$(cd /home/ci/link/$link && $JAR tf $standalone | grep $jarlib)
+    if [ ! $jarok ];then
+         echo "$standalone does not contains $jarlib"
+         exit
+    fi
+    echo "$jarok"
+
+    ## do jar 0uf
+    jardir=$(dirname $jarok)
+    jarroot=${jardir%%\/*}  ## get ONLY the BOOT-INT
+    echo "=>cd /home/ci/link/$link && mkdir -p $jardir && cp $links/$jar $jardir"
+    cd /home/ci/link/$link && mkdir -p $jardir && cp $links/$jar $jardir
+    echo ${PWD}
+    echo "=>jar 0uf $standalone $jarok && rm -rf $jarroot && ls -l"
+    $JAR 0uf $standalone $jarok && rm -rf $jarroot && ls -l
+    echo 'Done.'
+}
+
 
 ## main
 if [[ $cmd == cmdcleanm2 ]];then
@@ -488,6 +629,13 @@ elif [[ $cmd == cmdfindclass ]];then
     lib=$4
     class=$5
     findclass $jar $lib $class
+elif [[ $cmd == cmdlocalfindjar ]];then
+    jar=$4
+    localfindjar $jar
+elif [[ $cmd == cmdlocalputjar ]];then
+    jar=$4
+    link=$5
+    localputjar $jar $link
 else 
     echo Unknown cmd: $cmd
 fi

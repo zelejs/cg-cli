@@ -8,3 +8,5 @@ target/
 *.iml
 node_modules/
 cruds.xml
+/bin/
+/.project
