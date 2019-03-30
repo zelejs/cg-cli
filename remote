@@ -3,7 +3,6 @@
 my $cmd = shift @ARGV;
 my $dir = shift @ARGV;
 my $param = shift @ARGV;
-my $arg1 = shift @ARGV;
 
 if(!$dir || !$cmd){
     my $bin = $0;
@@ -18,7 +17,8 @@ if(!$dir || !$cmd){
     print "   clone <target>  -- clone a repo base on the dir repo \n";
     print "   test <repo>     -- clone test repo into a new repo\n";
     print "   pull .          -- pull all the repo in current dir]\n";
-    print "   mirror <target> <repo> -- mirror current repo into a mirror repo\n";
+    print "   mirror <target> [mirror] -- mirror current repo into a mirror repo\n";
+    print "   mirrorback <target> [imrror] -- mirror repo into current target\n";
     exit(0);
 }
 
@@ -84,16 +84,18 @@ if($cmd eq "xfr"){
       }## foreach
    }
 
-}elsif($cmd eq 'mirror'){
-   chdir $dir;
+}elsif($cmd eq 'mirror' || $cmd eq 'mirrorback'){
+   chdir $dir;  ## <target>
    my $mirror_repo = $param;
 
+   ## if define .mirror config
    if(!($mirror_repo)){
       if(-f ".mirror"){
          $mirror_repo= `cat .mirror`;
          $mirror_repo=~s/[\r\n\t\s]+$//; 
       }
    }
+   ## no mirror repo provided, use default mirror repo by target dir
    if(!($mirror_repo)){
       my $local_repo = get_local_repo();
       $local_repo =~ /\/([\w\.\-_]+)$/;
@@ -101,7 +103,6 @@ if($cmd eq "xfr"){
       $mirror_repo="devops\@zele.pro:/home/devops/mirror/$1";
       print "mirror: $mirror_repo\n";
    }
-
    if(!($mirror_repo)){
       print "Usage: remote mirror <target> <mirror-repo>\n";
       exit(0);
@@ -110,15 +111,26 @@ if($cmd eq "xfr"){
    my $local_repo = get_local_repo();
    print '## '.$local_repo." ##\n";
    
-   print "git remote set-url origin $mirror_repo\n";
-   print `git remote set-url origin $mirror_repo`;
-   print "git push origin master\n";
-   print `git push origin master`;
-   print "git remote set-url origin $local_repo\n";
-   print `git remote set-url origin $local_repo`;
+   ## mirror
+   if($cmd eq 'mirror'){
+      print "git remote set-url origin $mirror_repo\n";
+      print `git remote set-url origin $mirror_repo`;
+      print "git push origin master\n";
+      print `git push origin master`;
+      print "git remote set-url origin $local_repo\n";
+      print `git remote set-url origin $local_repo`;
+
+   }elsif($cmd eq 'mirrorback'){
+      print "git remote set-url origin $mirror_repo\n";
+      print `git remote set-url origin $mirror_repo`;
+      print "git pull origin master\n";
+      print `git pull origin master`;
+      print "git remote set-url origin $local_repo\n";
+      print `git remote set-url origin $local_repo`;
+   }
+
    print "\n";
    print '## '.get_local_repo()." ##\n";
-
 
 }elsif($cmd eq 'mv'){
    chdir $dir;
@@ -152,13 +164,15 @@ if($cmd eq "xfr"){
    chdir $dir;
    my $repo_root = get_local_repo_root();
    chdir "..";
+
+   my $new_repo = shift @ARGV;
    
    my $repo = $param;
    $repo =~ s/\///;
    $repo =~ s/\.git$//;
     
-   if ($arg1){
-      print `git clone $repo_root/$repo.git $arg1`;
+   if ($new_repo){
+      print `git clone $repo_root/$repo.git $new_repo`;
    }else{
       print `git clone $repo_root/$repo.git`;
    }
