@@ -226,6 +226,9 @@ pulllib(){
     scp -i $PEM -r ci@zele.pro:/home/ci/link/$link/$libroot .
     echo "=>find $libroot"
     find $libroot
+    echo "=>clean remote BOOT-INF"
+    echo "=>ssh ci@zele.pro "cd /home/ci/link/$link && rm -rf $libroot" 
+    ssh -i $PEM ci@zele.pro "cd /home/ci/link/$link && rm -rf $libroot"
 }
 
 showlib(){
