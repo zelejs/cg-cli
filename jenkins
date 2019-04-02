@@ -185,9 +185,10 @@ uploadjar(){
     ## do jar 0uf
     ##ssh -i $PEM ci@zele.pro "ls /home/ci/link/$link/$jardir"
     echo "=>jar 0uf $standalone $jarok"
-    #jarroot=${jardir%%\/*}  ## get ONLY the BOOT-INT
-    jarroot='BOOT-INT';
-    ssh -i $PEM ci@zele.pro "cd /home/ci/link/$link && $JAR 0uf $standalone $jarok && rm -rf $jardir/$jarroot && ls -l"
+    ## jarroot=${jardir%%\/*}  ## get ONLY the BOOT-INF
+    jarroot='BOOT-INF';
+    echo $jarok
+    ssh -i $PEM ci@zele.pro "cd /home/ci/link/$link && $JAR 0uf $standalone $jarok && rm -rf $jarroot && ls -l"
     echo 'Done.'
 }
 
