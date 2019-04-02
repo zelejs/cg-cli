@@ -574,6 +574,10 @@ localputjar() {
     jar=$1
     link=$2
     links='/home/ci/.jenkins/workspace'
+
+    if [ -f ${PWD}/$jar ];then
+        jar=$(readlink -f ${PWD}/$jar)
+    fi
     
     if [ ! -f $jar ];then
        if [ ! -f  $links/$jar ];then
