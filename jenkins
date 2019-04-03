@@ -7,7 +7,7 @@ usage() {
     echo "       jenkins upload jar <link>"
     echo "       jenkins show lib <link>"
     echo "       jenkins pull lib <link> <lib>"
-    echo "       jenkins deploy lib <BOOT-INF>"
+    echo "       jenkins deploy lib <BOOT-INF|WEB-INF>"
     echo "       jenkins deploy class <class> [container]"
     echo "       jenkins find class <jar> <lib> <class>"
     echo "       jenkins local find jar <jar>"
@@ -317,55 +317,61 @@ deploylib(){
         echo "e.g. export STANDALONE='mall-api-pack-1.0.0-standalone.jar'"
         exit
     fi
-
-
     lib=$1
 
-    ## nothing,no BOOT-INF dir
-    if [ ! -d BOOT-INF ];then
+    if [[ ${STANDALONE} == *.war ]];then
+       LIB_INF='WEB-INF'
+    else
+       LIB_INF='BOOT-INF'
+    fi
+
+    ## no BOOT-INF/WEB-INF, pull first and get the BOOT-INF/WEB-INF
+    if [ ! -d $LIB_INF ];then
         if [ ! $lib ];then
-            echo '=>BOOT-INF not exists, first pull the lib ..'
+            echo "=>$LIB_INF not exists, first pull the lib !"
             echo "deploy-cli.sh <lib>"
         else
             echo "=>jenkins pull lib $JENKINS_LINK $lib"
             pulllib $JENKINS_LINK $lib
-            find BOOT-INF
+            find $LIB_INF
         fi
+
+        ## to end anyway
         exit
     fi
 
-    BOOT_INF=$1
-
+    ## if BOOT-INF/WEB-INF exists, handle the lib
     ## just list the BOOT-INF dir if no param input
-    if [ ! $BOOT_INF ];then
-        if [ -d BOOT-INF ];then
-            find BOOT-INF
+    if [ ! $lib ];then
+        if [ -d $LIB_INF ];then
+            find $LIB_INF
             exit
         fi
     fi
 
     ## check args
-    if [ ! $BOOT_INF ];then
-        echo 'Usage: deploy_lib.sh <BOOT-INF>'
+    if [ ! $lib ];then
+        echo 'Usage: deploy_lib.sh <BOOT-INF|WEB-INF>'
         exit
     fi
-
+   
     ## check if lib exists
-    if [[ $BOOT_INF == BOOT-INF* ]];then
-        if [ ! -e $BOOT_INF ];then
-            echo $BOOT_INF not exists
+    if [[ $lib == $LIB_INF* ]];then
+        if [ ! -e $lib ];then
+            echo $lib not exists
             exit
         fi
-        if [ -d $BOOT_INF ];then
+        if [ -d $lib ];then
            echo .jar type of file is required
-           find BOOT-INF
+           find $LIB_INF
            exit
         fi
+        ## the end, must be the .jar file
+        libok=$lib
     else
-       echo "$BOOT_INF is not located in BOOT-INF !"
+       echo "$lib is not located in $LIB_INF !"
        exit
     fi
-
 
     ## find standalone if env STANDALONE is not set
     standalone=${STANDALONE} 
@@ -378,9 +384,10 @@ deploylib(){
     fi
 
     ## start pull the lib
-    lib=${BOOT_INF//BOOT-INF\/lib/}  ## cut BOOT-INF/lib, only jar
-    ## no BOOT-INF dir found, pull it down
-    if [ ! -d BOOT-INF ];then
+    libjar=${libok//$LIB_INF\/lib\//}  ## cut BOOT-INF/lib, only jar
+
+    ## no BOOT-INF/WEB-INF dir found, pull it down
+    if [ ! -d $LIB_INF ];then
         if [ $lib ];then
             if [ ! ${JENKINS_LINK} ];then
                 link=${PWD};link=${link//\/build/};link=$(basename $link)
@@ -388,21 +395,22 @@ deploylib(){
                 echo "export JENKINS_LINK='$link'"
                 exit
             fi
-            echo "=>jenkins pull lib ${JENKINS_LINK} $lib"
-            jenkins pull lib ${JENKINS_LINK} $lib
+            echo "=>jenkins pull lib ${JENKINS_LINK} $libjar"
+            jenkins pull lib ${JENKINS_LINK} $libjar
         fi
     fi
 
     ## check if jenkins pull is successful
-    if [ ! -e $BOOT_INF ];then
-        echo "fail to pull $lib from jenkins !"
+    if [ ! -e $LIB_INF ];then
+        echo "fail to pull $libjar from jenkins !"
         exit
     fi
 
     #backup rollback $standalone
     echo "cp $standalone $standalone.rollback_$(date "+%m-%d")"
-    echo "jar 0uf $standalone $BOOT_INF"
-    echo 'rm -rf BOOT-INF'
+    echo "jar tf webapps/ROOT.war|grep WEB-INF/lib/identity-application-2.3.0.jar"
+    echo "jar 0uf $standalone $libok"
+    echo "rm -rf $LIB_INF"
     echo "sh setup.sh"
 }
 
