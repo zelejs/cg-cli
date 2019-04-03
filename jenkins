@@ -7,7 +7,9 @@ usage() {
     echo "       jenkins upload jar <link>"
     echo "       jenkins show lib <link>"
     echo "       jenkins pull lib <link> <lib>"
+    echo "       jenkins export classes <lib> [pattern] [-o]"
     echo "       jenkins deploy lib <BOOT-INF|WEB-INF>"
+    echo "       jenkins deploy classes"
     echo "       jenkins deploy class <class> [container]"
     echo "       jenkins find class <jar> <lib> <class>"
     echo "       jenkins local find jar <jar>"
@@ -50,6 +52,35 @@ elif [[ $cmd2 == pulllib ]];then
 
     cmd=cmdpulllib
 
+elif [[ $cmd2 == exportclasses ]];then
+    lib=$3
+    
+    ## check WEB-INF|BOOT-INF exists
+    ok=''
+    if [ -d WEB-INF ];then
+      ok='WEB-INF'
+    elif [ -d BOOT-INF ];then 
+      ok='BOOT-INF'
+    fi
+    if [ ! $ok ];then
+      echo 'WEB-INF|BOOT-INF not exist'
+      exit
+    fi
+
+    if [ ! $lib ];then
+        find $ok -name "*.jar"
+        exit
+    fi
+
+    
+    ## check file exist
+    if [ ! -f $lib ];then
+       echo $lib not exists
+       exit
+    fi
+
+    cmd=cmdexportclasses
+
 elif [[ $cmd2 == showlib ]];then
     link=$3
     if [ ! $link ];then
@@ -60,6 +91,9 @@ elif [[ $cmd2 == showlib ]];then
     
 elif [[ $cmd2 == deploylib ]];then
     cmd=cmddeploylib
+
+elif [[ $cmd2 == deployclasses ]];then
+    cmd=cmddeployclasses
 
 elif [[ $cmd2 == deployclass ]];then
     cmd=cmddeployclass
@@ -268,6 +302,40 @@ pulllib(){
     echo Done.
 }
 
+exportclasses(){
+    lib=$1
+    pattern=$2
+    out=$3
+
+    if [[ $lib == BOOT-INF* ]];then  
+       LIB_INF='BOOT-INF'
+    elif [[ $lib == WEB-INF* ]];then
+       LIB_INF='WEB-INF'
+    fi
+    
+    if [ ! -d $LIB_INF/classes ];then
+       mkdir $LIB_INF/classes
+    fi
+    cd $LIB_INF/classes 
+
+    ## remove LIB_INF
+    lib=${lib//$LIB_INF\//}
+    lib="../$lib"
+
+    if [ $pattern ];then
+       classes=$(jar tf $lib | grep class | grep $pattern)
+    else
+       classes=$(jar tf $lib | grep class)
+    fi
+
+    for cls in $classes;do
+        echo $LIB_INF/classes/$cls
+        if [[ $out == '-o' ]];then
+           jar xf $lib $cls
+        fi
+    done
+}
+
 showlib(){
     link=$1
     links='/home/ci/link'
@@ -344,7 +412,7 @@ deploylib(){
     ## just list the BOOT-INF dir if no param input
     if [ ! $lib ];then
         if [ -d $LIB_INF ];then
-            find $LIB_INF
+            find $LIB_INF -name "*.jar"
             exit
         fi
     fi
@@ -408,11 +476,66 @@ deploylib(){
 
     #backup rollback $standalone
     echo "cp $standalone $standalone.rollback_$(date "+%m-%d")"
-    echo "jar tf webapps/ROOT.war|grep WEB-INF/lib/identity-application-2.3.0.jar"
-    echo "jar 0uf $standalone $libok"
+    echo "=>jar tf webapps/ROOT.war|grep $libok"
+    war_fix=$(basename $standalone).fix_$(date "+%m-%d")
+    echo "cp $standalone $war_fix"
+    echo ===========================================
+    echo "jar 0uf $war_fix $libok"
+    echo ===========================================
+    echo "mv $war_fix $standalone"
     echo "rm -rf $LIB_INF"
     echo "sh setup.sh"
 }
+
+
+deployclasses(){
+    ################################
+    # export STANDALONE='mall-api-pack-1.0.0-standalone.jar'
+    ################################
+    if [ ! ${STANDALONE} ];then
+        echo 'env STANDALONE is not exported !'
+        echo "e.g. export STANDALONE='mall-api-pack-1.0.0-standalone.jar'"
+        exit
+    fi
+
+    if [ ! -f ${STANDALONE} ];then
+       echo ${STANDALONE} not exists
+       exit
+    fi
+    standalone=${STANDALONE}
+
+    if [[ ${STANDALONE} == *.war ]];then
+       LIB_INF='WEB-INF'
+    else
+       LIB_INF='BOOT-INF'
+    fi
+
+    ## no BOOT-INF/WEB-INF, pull first and get the BOOT-INF/WEB-INF
+    if [ ! -d $LIB_INF ];then
+        echo "=>$LIB_INF not exists, first provide the classes !"
+        exit
+    fi
+
+    #cd $LIB_INF/classes
+    classes=$(find $LIB_INF -name "*.class")
+    cc=''
+    for cls in $classes;do
+      cls=${cls//\.\//}
+      cc="$cc $cls"
+    done
+
+    #backup rollback $standalone
+    echo "cp $standalone $standalone.rollback_$(date "+%m-%d")"
+    war_fix=$(basename $standalone).fix_$(date "+%m-%d")
+    echo "cp $standalone $war_fix"
+    echo ===========================================
+    echo "jar 0uf $war_fix $cc"
+    echo ===========================================
+    echo "mv $war_fix $standalone"
+    echo "rm -rf $LIB_INF"
+    echo "sh setup.sh"
+}
+
 
 findclass() {
    jar=$1
@@ -712,12 +835,23 @@ elif [[ $cmd == cmdpulllib ]];then
     link=$3
     lib=$4
     pulllib $link $lib
+elif [[ $cmd == cmdexportclasses ]];then
+    lib=$3
+    pattern=$4
+    out=$5
+    if [[ $pattern == '-o' ]];then
+       out='-o'
+       pattern='' 
+    fi
+    exportclasses $lib $pattern $out
 elif [[ $cmd == cmdshowlib ]];then
     link=$3
     showlib $link
 elif [[ $cmd == cmddeploylib ]];then
     BOOT_INF=$3
     deploylib $BOOT_INF
+elif [[ $cmd == cmddeployclasses ]];then
+    deployclasses
 elif [[ $cmd == cmddeployclass ]];then
     CLASS=$3
     CONTAINER=$4
