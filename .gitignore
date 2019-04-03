@@ -10,3 +10,5 @@ node_modules/
 cruds.xml
 /bin/
 /.project
+WEB-INF/
+BOOT-INF/

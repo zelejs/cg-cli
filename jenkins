@@ -5,8 +5,8 @@ usage() {
     echo "Usage: jenkins clean m2"
     echo "       jenkins show link [link]"
     echo "       jenkins upload jar <link>"
-    echo "       jenkins pull lib <link> <lib>"
     echo "       jenkins show lib <link>"
+    echo "       jenkins pull lib <link> <lib>"
     echo "       jenkins deploy lib <BOOT-INF>"
     echo "       jenkins deploy class <class> [container]"
     echo "       jenkins find class <jar> <lib> <class>"
@@ -196,22 +196,58 @@ uploadjar(){
 pulllib(){
     link=$1
     lib=$2
+    links='/home/ci/link'
 
     ## find the standalone jar
     #echo "find standalone package on jenkin /home/ci/link/$link .."
-    standalone=$(ssh -i $PEM ci@zele.pro "cd /home/ci/link/$link && ls *-standalone.jar")
-    if [ ! $standalone ];then
+    libs=$(ssh -i $PEM ci@zele.pro "cd $links/$link && ls *-standalone.jar *.war")
+    if [ ! $libs ];then
         echo "no standalone jar found !"
         exit
     fi
-    echo "=>standalone jar: /home/ci/link/$link/$standalone"
+    ## get how many libs
+    i=0
+    for it in $libs;do
+        i=$(($i+1))
+    done
+    ## if no match
+    if [ $i -eq 0 ];then
+        echo no libs found !
+        exit
+    fi
+    ## if more than 1
+    if [ $i -gt 1 ];then
+        for it in $libs;do
+            echo $links/$link/$it
+        done
+        exit
+    fi
+    standalone=$libs
+    echo "$links/$standalone"
 
     ## check if standalone contains required lib
-    echo "=>check if $standalone contains $lib .."
-    libok=$(ssh -i $PEM ci@zele.pro "cd /home/ci/link/$link && $JAR tf $standalone | grep $lib")
-    if [ ! $libok ];then
-         echo "$standalone does not contains $lib"
-         exit
+    echo "=>check if $standalone contains $lib"
+    if [[ $standalone == *.war ]];then
+       libok=$(ssh -i $PEM ci@zele.pro "cd $links/$link && $JAR tf $standalone | grep WEB-INF/lib | grep $lib")
+    else 
+       libok=$(ssh -i $PEM ci@zele.pro "cd $links/$link && $JAR tf $standalone | grep BOOT-INF/lib | grep $lib")
+    fi
+    ## get how many items
+    i=0
+    for it in $libok;do
+        i=$(($i+1))
+    done
+    ## if no match
+    if [ $i -eq 0 ];then
+        echo "$standalone does not contains $lib !"
+        exit
+    fi
+    ## if more than 1
+    if [ $i -gt 1 ];then
+        for it in $libok;do
+            echo $it
+        done
+        exit
     fi
     echo "$libok"
 
@@ -226,17 +262,38 @@ pulllib(){
     scp -i $PEM -r ci@zele.pro:/home/ci/link/$link/$libroot .
     echo "=>find $libroot"
     find $libroot
-    echo "=>clean remote BOOT-INF"
-    echo "=>ssh ci@zele.pro "cd /home/ci/link/$link && rm -rf $libroot" 
-    ssh -i $PEM ci@zele.pro "cd /home/ci/link/$link && rm -rf $libroot"
+    echo "=>clean remote BOOT-INF/WEB-INF"
+    #echo "=>ssh ci@zele.pro \"cd /home/ci/link/$link && rm -rf $libroot\""
+    ssh -i $PEM ci@zele.pro "cd /home/ci/link/$link && rm -rf $libroot"  
+    echo Done.
 }
 
 showlib(){
     link=$1
+    links='/home/ci/link'
 
     ## find the standalone jar
     #echo "find standalone package on jenkin /home/ci/link/$link .."
-    standalone=$(ssh -i $PEM ci@zele.pro "cd /home/ci/link/$link && ls *-standalone.jar")
+    libs=$(ssh -i $PEM ci@zele.pro "cd $links/$link && ls *.jar *.war")
+    ## get how many class
+    i=0
+    for lib in $libs;do
+        i=$(($i+1))
+    done
+    ## if no match
+    if [ $i -eq 0 ];then
+        echo no libs found !
+        exit
+    fi
+    ## if more than 1
+    if [ $i -gt 1 ];then
+        for lib in $libs;do
+            echo $links/$lib
+        done
+        exit
+    fi
+    standalone=$libs
+
     if [ ! $standalone ];then
         echo "no standalone jar found !"
         exit
