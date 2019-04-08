@@ -11,6 +11,7 @@
     "bin": {
         "cg-cli": "./cg-cli",
         "remote": "./remote",
-	"jenkins": "./jenkins"
+        "jenkins": "./jenkins",
+        "allin-cli": "./allin-cli"
     }
 }

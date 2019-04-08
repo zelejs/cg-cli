@@ -1,0 +1,236 @@
+#!/usr/bin/env bash
+cmd=$1
+
+usage() {
+    echo "Usage: allin-cli deploy web --ssh user@host --name name [OPTIONS]"
+    echo "       allin-cli deploy api --ssh user@host --name name [OPTIONS]"
+    echo "  OPTIONS"
+    echo "      --binding  port     [8000]"
+    echo "      --link     url      [http://127.0.0.1/url/web.zip]"
+    echo "      --ep       endpoint [127.0.0.1:8080] only for web"
+    exit
+}
+
+if [ ! $cmd ];then
+   usage
+fi
+
+cmd2=$1$2
+
+if [[ $cmd2 == deployweb ]];then
+    cmd=cmddeployweb
+
+elif [[ $cmd2 == eployapi ]];then
+    cmd=cmddeployapi
+
+else
+    usage
+fi
+
+### start ###
+#dir=$(readlink -f $0)
+#dir=$(dirname $dir)
+#PEM=$dir/ssh/use-ci-jenkins-deploy.pem
+
+allindeployweb(){
+    ssh=$1
+    name=$2
+    binding=$3
+    link=$4
+    endpoint=$5
+
+    ## check link for dist, http://url/fileName.zip
+    if [ "$link"x == "{}"x ];then
+        if [ -d dist ];then 
+           link='dist'
+        else
+           echo "dist not exists"
+           exit
+        fi
+
+    elif [[ $link == "http://*" ]];then
+       if [[ $link == *.tar || $link == *.tar.gz || $link == *.zip ]];then 
+           link=$link
+       else
+          echo "Invalid link url: $link !"
+       fi
+    else  
+        echo "Invalid link url: $link !"
+        exit
+    fi
+
+    ## check binding 
+    if [ "$binding"x == "0"x ];then
+        binding='8000'
+    fi
+
+
+    ## make sure args ok
+    echo $ssh, $name, $binding, $link, $endpoing
+
+    ######################
+    ## start deploy     ##
+    ######################
+
+    ## cp dist/target/*.jar to ssh
+    echo "=>tar zcvf dist.tar.gz dist"
+    tar zcvf dist.tar.gz dist
+
+    ## ready for the path
+    echo "=>ssh $ssh \"mkdir -p ~/$name/web\""
+    ssh $ssh "if [ ! -d ~/$name/web ];then mkdir -p  ~/$name/web; elif [ -d ~/$name/web/dist ];then rm -rf ~/$name/web/dist; fi"
+    
+    ## cp dist to ssh
+    echo "=>scp dist.tar.gz $ssh:~/$name/web"
+    scp dist.tar.gz $ssh:~/$name/web
+    echo "=>ssh $ssh \"cd ~/$name/web && tar zxvf dist.tar.gz && rm dist.tar.gz\""
+    ssh $ssh "cd ~/$name/web && tar zxvf dist.tar.gz && rm dist.tar.gz && echo \"windows.MC={}\" > dist/config.js && echo \"windows.MC.HOST=$endpoint\" >> dist/config.js"
+
+    ## run docker if no docker $name
+    ip=$(ssh $ssh "docker inspect $name --format '{{.NetworkSettings.IPAddress}}'")
+    if [ $ip ];then
+       echo "=>docker restart $name"
+       ssh $ssh "docker restart $name"
+    else
+       echo "=>docker run --name $name -d -v ~/$name/web/dist:/var/www/html -p $binding:80 zelejs/allin-web-slim:latest"
+       ssh $ssh "docker run --name $name -d -v ~/$name/web/dist:/var/www/html -p $binding:80 zelejs/allin-web-slim:latest"
+    fi
+}
+
+allindeployapi(){
+    ssh=$1
+    name=$2
+    binding=$3
+    link=$4
+    endpoint=$5
+
+    ## check link for target, http://url/fileName.jar
+    if [ "$link"x == "{}"x ];then
+        if [ -d target ];then 
+           link='target'
+        else
+           echo "--link url not provided !"
+           exit
+        fi
+    elif [[ $link == "http://*" ]];then
+       if [[ $link == *.tar || $link == *.tar.gz || $link == *.zip ]];then 
+          link=$link
+       else
+          echo "Invalid link url: $link !"
+       fi
+    else  
+        echo "Invalid link url: $link !"
+        exit
+    fi
+
+    ## check binding 
+    if [ "$binding"x == "0"x ];then
+        binding='8080'
+    fi
+
+    ## make sure args ok
+    echo $ssh, $name, $binding, $link, $endpoing
+
+    ######################
+    ## start deploy     ##
+    ######################
+
+    ## cp dist/target/*.jar to ssh
+    ## ready for the path
+    echo "=>ssh $ssh \"mkdir -p ~/$name/api\""
+    ssh $ssh "if [ ! -d ~/$name/api ];then mkdir -p  ~/$name/api; fi"
+
+    ## find standalone 
+    standalone=$(find target -name "*-standalone.jar")
+    if [ ! $standalone ];then
+        echo no standalone jar !
+        exit
+    fi
+    
+    ## cp dist to ssh
+    echo "=>scp $standalone $ssh:~/$name/api"
+    scp $standalone $ssh:~/$name/api
+
+    ## check docker rnning
+    ip=$(ssh $ssh "docker inspect $name --format '{{.NetworkSettings.IPAddress}}'")
+    if [ $ip ];then
+       echo "=>docker restart $name"
+       ssh $ssh "docker restart $name"
+    else
+       echo "=>docker run --name $name -d -v ~/$name/api:/webapps -p $binding:8080 zelejs/allin-web-slim:latest"
+       ssh $ssh "docker run --name $name -d -v ~/$name/api:/webapps -p $binding:8080 zelejs/allin-web-slim:latest"
+    fi
+}
+
+## main
+if [[ $cmd == cmdallindeploy*  ]];then
+    it=''
+    for arg in $@;do
+        if [ "$arg"x == "--ssh"x ];then
+           it=$arg
+        elif [ "$arg"x == "--name"x ];then
+           it=$arg
+        elif [ "$arg"x == "--link"x ];then
+           it=$arg
+        elif [ "$arg"x == "--binding"x ];then
+           it=$arg
+        elif [ "$arg"x == "--ep"x ];then
+           it=$arg
+        fi
+
+        ## get the arg
+        if [ "$it"x == "--ssh"x ];then
+           ssh=$arg
+        elif [ "$it"x == "--name"x ];then
+           name=$arg
+        elif [ "$it"x == "--link"x ];then
+           link=$arg
+        elif [ "$it"x == "--binding"x ];then
+           binding=$arg
+        elif [ "$it"x == "--ep"x ];then
+           endpoint=$arg
+        fi
+    done
+
+    if [ ! $ssh ];then
+       echo "--ssh [user@host] not being provided !"
+       exit
+    fi
+
+    if [ ! $ssh == "*@*" ];then
+       ssh="$ssh@127.0.0.1"
+    fi
+
+    if [ ! $name ];then
+       echo "--name [name] not being provided !"
+       exit
+    fi
+
+    ## no link, will find dist/target locally
+    if [ ! $link ];then
+       link='{}'
+    fi
+
+    ## check binding
+    if [ ! $binding ];then
+       binding='0'
+    fi
+
+    ## for web
+    if [[ $cmd == cmdallindeployweb ]];then
+        allindeployweb $ssh $name $binding $link $endpoint 
+    fi
+
+    ## for api
+    if [[ $cmd == cmdallindeployweb ]];then
+
+        ## check endpoint
+        if [ ! $endpoint ];then 
+            endpoint='127.0.0.1:8080'
+        fi
+
+        allindeployweb $ssh $name $binding $link 
+    fi
+else 
+    echo Unknown cmd: $cmd
+fi

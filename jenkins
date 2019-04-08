@@ -14,9 +14,6 @@ usage() {
     echo "       jenkins find class <jar> <lib> <class>"
     echo "       jenkins local find jar <jar>"
     echo "       jenkins local put jar <jar> <link>"
-    echo "       jenkins allin deploy --ssh user@host --name name [OPTIONS]"
-    echo "         OPTIONS"
-    echo "            --binding 8000 --link url --ep 127.0.0.1:8080"
     exit
 }
 
@@ -825,96 +822,6 @@ localputjar() {
     echo 'Done.'
 }
 
-allindeploy(){
-    ssh=$1
-    name=$2
-    binding=$3
-    link=$4
-    endpoint=$5
-
-    ## check link for dist/target, http://url/fileName.zip fileName.jar
-    webvsapi=''
-    if [ "$link"x == "{}"x ];then
-        if [ -d dist ];then 
-           link='dist'
-           webvsapi='web'
-        elif [ -d target ];then 
-           link='target'
-           webvsapi='api'
-        else
-           echo "--link url not provided !"
-           exit
-        fi
-    elif [[ $link == "http://*" ]];then
-       if [[ $link == *.tar || $link == *.tar.gz || $link == *.zip ]];then 
-          webvsapi='web'
-       elif [[ $link == *.jar ]];then
-          webvsapi='api'
-       else
-          echo "Invalid link $link !"
-       fi
-    else  
-        echo "Invalid link $link !"
-        exit
-    fi
-
-    ## check binding 
-    if [ "$binding"x == "0"x ];then
-        if [ "$webvsapi"x == "web"x ];then 
-           binding='8000'
-        elif [ "$webvsapi"x == "api"x ];then 
-           binding='8080'
-        fi
-    fi
-
-    ## make sure args ok
-    echo $ssh, $name, $binding, $link, $endpoing
-
-    ######################
-    ## start deploy     ##
-    ######################
-
-    ## cp dist/target/*.jar to ssh
-    if [ "$webvsapi"x == "web"x ];then
-        echo "=>tar zcvf dist.tar.gz dist"
-        tar zcvf dist.tar.gz dist
-
-        ## ready for the path
-        echo "=>ssh $ssh \"mkdir -p ~/$name/web\""
-        ssh $ssh "if [ ! -d ~/$name/web ];then mkdir -p  ~/$name/web; elif [ -d ~/$name/web/dist ];then rm -rf ~/$name/web/dist; fi"
-        
-        ## cp dist to ssh
-        echo "=>scp dist.tar.gz $ssh:~/$name/web"
-        scp dist.tar.gz $ssh:~/$name/web
-        echo "=>ssh $ssh \"cd ~/$name/web && tar zxvf dist.tar.gz && rm dist.tar.gz\""
-        ssh $ssh "cd ~/$name/web && tar zxvf dist.tar.gz && rm dist.tar.gz && echo \"windows.MC={}\" > dist/config.js && echo \"windows.MC.HOST=$endpoint\" >> dist/config.js"
-
-        ## run docker
-        echo "=>docker run --name $name -d -v ~/$name/web/dist:/var/www/html -p $binding:80 zelejs/allin-web-slim:latest"
-        ssh $ssh "docker stop $name && docker rm $name && docker run --name $name -d -v ~/$name/web/dist:/var/www/html -p $binding:80 zelejs/allin-web-slim:latest"
-    elif "$webvsapi"x == "api"x ];then
-        ## ready for the path
-        echo "=>ssh $ssh \"mkdir -p ~/$name/api\""
-        ssh $ssh "if [ ! -d ~/$name/api ];then mkdir -p  ~/$name/api; fi"
-
-        ## find standalone 
-        
-        
-        ## cp dist to ssh
-        echo "=>scp $standalone $ssh:~/$name/api"
-        scp $standalone $ssh:~/$name/api
-
-        ## run docker
-        echo "=>docker run --name $name -d -v ~/$name/api:/webapps -p $binding:8080 zelejs/allin-web-slim:latest"
-        ssh $ssh "docker stop $name && docker rm $name && docker run --name $name -d -v ~/$name/web/dist:/var/www/html -p $binding:80 zelejs/allin-web-slim:latest"
-    fi
-
-    ## run docker
-    
-    
-}
-
-
 ## main
 if [[ $cmd == cmdcleanm2 ]];then
     cleanm2
@@ -961,64 +868,6 @@ elif [[ $cmd == cmdlocalputjar ]];then
     jar=$4
     link=$5
     localputjar $jar $link
-elif [[ $cmd == cmdallindeploy ]];then
-    it=''
-    for arg in $@;do
-        if [ "$arg"x == "--ssh"x ];then
-           it=$arg
-        elif [ "$arg"x == "--name"x ];then
-           it=$arg
-        elif [ "$arg"x == "--link"x ];then
-           it=$arg
-        elif [ "$arg"x == "--binding"x ];then
-           it=$arg
-        elif [ "$arg"x == "--ep"x ];then
-           it=$arg
-        fi
-
-        ## get the arg
-        if [ "$it"x == "--ssh"x ];then
-           ssh=$arg
-        elif [ "$it"x == "--name"x ];then
-           name=$arg
-        elif [ "$it"x == "--link"x ];then
-           link=$arg
-        elif [ "$it"x == "--binding"x ];then
-           binding=$arg
-        elif [ "$it"x == "--ep"x ];then
-           endpoint=$arg
-        fi
-    done
-
-    if [ ! $ssh ];then
-       echo "--ssh [user@host] not being provided !"
-       exit
-    fi
-
-    if [ ! $ssh == "*@*" ];then
-       ssh="$ssh@127.0.0.1"
-    fi
-
-    if [ ! $name ];then
-       echo "--name [name] not being provided !"
-       exit
-    fi
-
-    ## no link, will find dist/target locally
-    if [ ! $link ];then
-       link='{}'
-    fi
-
-    ## check binding
-    if [ ! $binding ];then
-       binding='0'
-    fi
-
-    if [ ! $endpoint ];then 
-        endpoint='127.0.0.1:8080'
-    fi
-
-    allindeploy $ssh $name $binding $link $endpoint 
 else 
     echo Unknown cmd: $cmd
 fi
