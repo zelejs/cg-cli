@@ -14,6 +14,9 @@ usage() {
     echo "       jenkins find class <jar> <lib> <class>"
     echo "       jenkins local find jar <jar>"
     echo "       jenkins local put jar <jar> <link>"
+    echo "       jenkins allin deploy --ssh user@host --name name [OPTIONS]"
+    echo "         OPTIONS"
+    echo "            --binding 8000 --link url --ep 127.0.0.1:8080"
     exit
 }
 
@@ -122,6 +125,9 @@ elif [[ $cmd3 == localputjar ]];then
        usage
     fi
     cmd=cmdlocalputjar
+
+ elif [[ $cmd2 == allindeploy ]];then
+    cmd=cmdallindeploy
 
 else
     usage
@@ -476,14 +482,13 @@ deploylib(){
 
     #backup rollback $standalone
     echo "cp $standalone $standalone.rollback_$(date "+%m-%d")"
-    echo "=>jar tf webapps/ROOT.war|grep $libok"
     war_fix=$(basename $standalone).fix_$(date "+%m-%d")
     echo "cp $standalone $war_fix"
     echo ===========================================
     echo "jar 0uf $war_fix $libok"
+    echo "rm -rf $LIB_INF"
     echo ===========================================
     echo "mv $war_fix $standalone"
-    echo "rm -rf $LIB_INF"
     echo "sh setup.sh"
 }
 
@@ -806,19 +811,67 @@ localputjar() {
     jarroot=${jardir%%\/*}  ## get ONLY the BOOT-INT
     echo "=>cd /home/ci/link/$link && mkdir -p $jardir"
     cd /home/ci/link/$link && mkdir -p $jardir
-    find $jardir 
+    echo "=>PWD"
+    echo ${PWD}
     if [ ! -f $jar ];then
        jar=$links/$jar 
     fi
     echo "=>cp $jar $jardir"
     cp $jar $jardir
     find $jardir
-    echo "=>PWD"
-    echo ${PWD}
     echo "=>jar 0uf $standalone $jarok"
     $JAR 0uf $standalone $jarok
     rm -rf $jarroot && ls -l
     echo 'Done.'
+}
+
+allindeploy(){
+    ssh=$1
+    name=$2
+    binding=$3
+    link=$4
+    endpoint=$5
+
+    ## check link for dist/target, http://url/fileName.zip fileName.jar
+    webvsjar=''
+    if [ "$link"x == "{}"x ];then
+        if [ -d dist ];then 
+           link='dist'
+           webvsjar='web'
+        elif [ -d target ];then 
+           link='target'
+           webvsjar='jar'
+        else
+           echo "--link url not provided !"
+           exit
+        fi
+    elif [[ $link == "http://*" ]];then
+       if [[ $link == *.tar || $link == *.tar.gz || $link == *.zip ]];then 
+          webvsjar='web'
+       elif [[ $link == *.jar ]];then
+          webvsjar='jar'
+       else
+          echo "Invalid link $link !"
+       fi
+    else  
+        echo "Invalid link $link !"
+        exit
+    fi
+
+    ## check binding 
+    if [ "$binding"x == "0"x ];then
+        if [ "$webvsjar"x == "web"x ];then 
+           binding='8000'
+        elif [ "$webvsjar"x == "jar"x ];then 
+           binding='8080'
+        fi
+    fi
+
+    ## make sure args ok
+    #echo $ssh, $name, $binding, $link, $endpoing
+
+    ## start deploy
+    
 }
 
 
@@ -868,6 +921,64 @@ elif [[ $cmd == cmdlocalputjar ]];then
     jar=$4
     link=$5
     localputjar $jar $link
+elif [[ $cmd == cmdallindeploy ]];then
+    it=''
+    for arg in $@;do
+        if [[ $arg == '--ssh' ]];then
+           it=$arg
+        elif [[ $arg == '--name' ]];then
+           it=$arg
+        elif [[ $arg == '--link' ]];then
+           it=$arg
+        elif [[ $arg == '--binding' ]];then
+           it=$arg
+        elif [[ $arg == '--ep' ]];then
+           it=$arg
+        fi
+
+        ## get the arg
+        if [[ $it == '--ssh' ]];then
+           ssh=$arg
+        elif [[ $it == '--name' ]];then
+           name=$arg
+        elif [[ $it == '--link' ]];then
+           link=$arg
+        elif [[ $it == '--binding' ]];then
+           binding=$arg
+        elif [[ $it == '--ep' ]];then
+           endpoint=$arg
+        fi
+    done
+
+    if [ ! $ssh ];then
+       echo "--ssh [user@host] not being provided !"
+       exit
+    fi
+
+    if [ ! $ssh == "*@*" ];then
+       ssh="$ssh@127.0.0.1"
+    fi
+
+    if [ ! $name ];then
+       echo "--name [name] not being provided !"
+       exit
+    fi
+
+    ## no link, will find dist/target locally
+    if [ ! $link ];then
+       link='{}'
+    fi
+
+    ## check binding
+    if [ ! $binding ];then
+       binding='0'
+    fi
+
+    if [ ! $endpoint ];then 
+        endpoint='127.0.0.1:8080'
+    fi
+
+    allindeploy $ssh $name $binding $link $endpoint 
 else 
     echo Unknown cmd: $cmd
 fi
