@@ -833,23 +833,23 @@ allindeploy(){
     endpoint=$5
 
     ## check link for dist/target, http://url/fileName.zip fileName.jar
-    webvsjar=''
+    webvsapi=''
     if [ "$link"x == "{}"x ];then
         if [ -d dist ];then 
            link='dist'
-           webvsjar='web'
+           webvsapi='web'
         elif [ -d target ];then 
            link='target'
-           webvsjar='jar'
+           webvsapi='api'
         else
            echo "--link url not provided !"
            exit
         fi
     elif [[ $link == "http://*" ]];then
        if [[ $link == *.tar || $link == *.tar.gz || $link == *.zip ]];then 
-          webvsjar='web'
+          webvsapi='web'
        elif [[ $link == *.jar ]];then
-          webvsjar='jar'
+          webvsapi='api'
        else
           echo "Invalid link $link !"
        fi
@@ -860,17 +860,57 @@ allindeploy(){
 
     ## check binding 
     if [ "$binding"x == "0"x ];then
-        if [ "$webvsjar"x == "web"x ];then 
+        if [ "$webvsapi"x == "web"x ];then 
            binding='8000'
-        elif [ "$webvsjar"x == "jar"x ];then 
+        elif [ "$webvsapi"x == "api"x ];then 
            binding='8080'
         fi
     fi
 
     ## make sure args ok
-    #echo $ssh, $name, $binding, $link, $endpoing
+    echo $ssh, $name, $binding, $link, $endpoing
 
-    ## start deploy
+    ######################
+    ## start deploy     ##
+    ######################
+
+    ## cp dist/target/*.jar to ssh
+    if [ "$webvsapi"x == "web"x ];then
+        echo "=>tar zcvf dist.tar.gz dist"
+        tar zcvf dist.tar.gz dist
+
+        ## ready for the path
+        echo "=>ssh $ssh \"mkdir -p ~/$name/web\""
+        ssh $ssh "if [ ! -d ~/$name/web ];then mkdir -p  ~/$name/web; elif [ -d ~/$name/web/dist ];then rm -rf ~/$name/web/dist; fi"
+        
+        ## cp dist to ssh
+        echo "=>scp dist.tar.gz $ssh:~/$name/web"
+        scp dist.tar.gz $ssh:~/$name/web
+        echo "=>ssh $ssh \"cd ~/$name/web && tar zxvf dist.tar.gz && rm dist.tar.gz\""
+        ssh $ssh "cd ~/$name/web && tar zxvf dist.tar.gz && rm dist.tar.gz && echo \"windows.MC={}\" > dist/config.js && echo \"windows.MC.HOST=$endpoint\" >> dist/config.js"
+
+        ## run docker
+        echo "=>docker run --name $name -d -v ~/$name/web/dist:/var/www/html -p $binding:80 zelejs/allin-web-slim:latest"
+        ssh $ssh "docker stop $name && docker rm $name && docker run --name $name -d -v ~/$name/web/dist:/var/www/html -p $binding:80 zelejs/allin-web-slim:latest"
+    elif "$webvsapi"x == "api"x ];then
+        ## ready for the path
+        echo "=>ssh $ssh \"mkdir -p ~/$name/api\""
+        ssh $ssh "if [ ! -d ~/$name/api ];then mkdir -p  ~/$name/api; fi"
+
+        ## find standalone 
+        
+        
+        ## cp dist to ssh
+        echo "=>scp $standalone $ssh:~/$name/api"
+        scp $standalone $ssh:~/$name/api
+
+        ## run docker
+        echo "=>docker run --name $name -d -v ~/$name/api:/webapps -p $binding:8080 zelejs/allin-web-slim:latest"
+        ssh $ssh "docker stop $name && docker rm $name && docker run --name $name -d -v ~/$name/web/dist:/var/www/html -p $binding:80 zelejs/allin-web-slim:latest"
+    fi
+
+    ## run docker
+    
     
 }
 
@@ -924,28 +964,28 @@ elif [[ $cmd == cmdlocalputjar ]];then
 elif [[ $cmd == cmdallindeploy ]];then
     it=''
     for arg in $@;do
-        if [[ $arg == '--ssh' ]];then
+        if [ "$arg"x == "--ssh"x ];then
            it=$arg
-        elif [[ $arg == '--name' ]];then
+        elif [ "$arg"x == "--name"x ];then
            it=$arg
-        elif [[ $arg == '--link' ]];then
+        elif [ "$arg"x == "--link"x ];then
            it=$arg
-        elif [[ $arg == '--binding' ]];then
+        elif [ "$arg"x == "--binding"x ];then
            it=$arg
-        elif [[ $arg == '--ep' ]];then
+        elif [ "$arg"x == "--ep"x ];then
            it=$arg
         fi
 
         ## get the arg
-        if [[ $it == '--ssh' ]];then
+        if [ "$it"x == "--ssh"x ];then
            ssh=$arg
-        elif [[ $it == '--name' ]];then
+        elif [ "$it"x == "--name"x ];then
            name=$arg
-        elif [[ $it == '--link' ]];then
+        elif [ "$it"x == "--link"x ];then
            link=$arg
-        elif [[ $it == '--binding' ]];then
+        elif [ "$it"x == "--binding"x ];then
            binding=$arg
-        elif [[ $it == '--ep' ]];then
+        elif [ "$it"x == "--ep"x ];then
            endpoint=$arg
         fi
     done
