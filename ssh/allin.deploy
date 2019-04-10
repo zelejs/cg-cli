@@ -1,0 +1,88 @@
+cmd=$1
+name=$2
+binding=$3
+if [[ $cmd == api ]];then
+   PORT='8080'
+   data=$4
+elif [[ $cmd == web ]];then
+   PORT='80'
+fi
+
+## check docker rnning
+ip=$(docker inspect $name --format '{{.NetworkSettings.IPAddress}}')
+if [ ! $ip ];then
+   if [[ $cmd == api ]];then
+      docker run --name $name -d -v ~/$name/api:/webapps -p $binding:$PORT zelejs/allin-web:slim
+   elif [[ $cmd == web ]];then
+      docker run --name $name -d -v ~/$name/web:/var/html/www -p $binding:$PORT zelejs/allin-web:slim
+   fi
+   exit
+fi
+
+gen_used_ports() {
+   ports=$(docker port $name)
+   ports=${ports// -> /->}
+   #8080/tcp->0.0.0.0:10080
+
+   ## for each port binding  
+   new_ports=''
+   for port in $ports;do
+      
+      ## get host port
+      host_port=$port
+      host_port=${host_port#*:}  ## remove all before :
+
+      ## get node port
+      node_port=$port
+      node_port=${node_port%\/*}  ## remove all after /
+
+      new_ports="$new_ports -p $host_port:$node_port"
+   done
+
+   echo $new_ports
+}
+
+binding_port="$binding:$PORT"
+used_ports=$(gen_used_ports)
+
+## if binding already exist, just restart the node
+if [[ $used_ports == *[[:space:]]$binding_port* ]];then
+   echo "=>docker restart $name"
+   docker restart $name
+   exit
+fi
+
+## if 8080/80 already exist, but binding changed, replace
+if [[ $used_ports == *:$PORT* ]];then
+    used_ports=${used_ports//[[:digit:]]*:$PORT/$binding:$PORT}
+fi
+
+
+## find volume binds
+gen_used_binds() {
+    name=$1
+    binds=$(docker inspect $name --format '{{ .HostConfig.Binds}}')
+    binds=${binds//\[/}  ## remove [
+    binds=${binds//\]/}  ## remove ]
+
+    new_binds=''
+    for bind in $binds;do
+        new_binds="$new_binds -v $bind"
+    done
+    echo $new_binds
+}
+
+used_binds=$(gen_used_binds $name)
+if [[ $used_binds == */webapps* ]];then
+    ## ok
+    used_binds=$used_binds
+else
+   used_binds="$used_binds -v ~/$name/api:/webapps"
+fi
+
+## no port found, run again
+if [ ! $ok ];then
+   docker stop $name
+   docker rm $name
+   docker run --name $name -e MYSQL_URL=$data -d $used_binds $used_ports zelejs/allin-web:slim
+fi

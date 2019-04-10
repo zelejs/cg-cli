@@ -2,12 +2,13 @@
 cmd=$1
 
 usage() {
-    echo "Usage: allin-cli deploy web --ssh user@host --name name [OPTIONS]"
-    echo "       allin-cli deploy api --ssh user@host --name name [OPTIONS]"
+    echo "Usage: allin-cli deploy web <user@host> <name> [OPTIONS]"
+    echo "       allin-cli deploy api <user@host> <name> [OPTIONS]"
+    echo "       allin-cli gen url <db> [127.0.0.1] [3306] [root] [root]"
     echo "  OPTIONS"
-    echo "      --binding  port     [8000]"
-    echo "      --link     url      [http://127.0.0.1/url/web.zip]"
-    echo "      --ep       endpoint [127.0.0.1:8080] only for web"
+    echo "      --binding  port [8000] for web, [8080] for api"
+    echo "      --data     url  [jdbc:mysql://127.0.0.1/test?user=root&password=root&characterEncoding=utf8"]
+    echo "      --endpoint api  [127.0.0.1:8080] only for web"
     exit
 }
 
@@ -20,9 +21,14 @@ cmd2=$1$2
 if [[ $cmd2 == deployweb ]];then
     cmd=cmddeployweb
 
-elif [[ $cmd2 == eployapi ]];then
+elif [[ $cmd2 == deployapi ]];then
     cmd=cmddeployapi
-
+elif [[ $cmd2 == genurl ]];then   
+    db=$3
+    if [ ! $db ];then  
+        usage
+    fi
+    cmd=cmdgenurl
 else
     usage
 fi
@@ -32,7 +38,7 @@ fi
 #dir=$(dirname $dir)
 #PEM=$dir/ssh/use-ci-jenkins-deploy.pem
 
-allindeployweb(){
+deployweb(){
     ssh=$1
     name=$2
     binding=$3
@@ -92,18 +98,20 @@ allindeployweb(){
        echo "=>docker restart $name"
        ssh $ssh "docker restart $name"
     else
-       echo "=>docker run --name $name -d -v ~/$name/web/dist:/var/www/html -p $binding:80 zelejs/allin-web-slim:latest"
-       ssh $ssh "docker run --name $name -d -v ~/$name/web/dist:/var/www/html -p $binding:80 zelejs/allin-web-slim:latest"
+       echo "=>docker run --name $name -d -v ~/$name/web/dist:/var/www/html -p $binding:80 zelejs/allin-web:slim"
+       ssh $ssh "echo \"docker run --name $name -d -v ~/$name/web/dist:/var/www/html -p $binding:80 zelejs/allin-web:slim\" > docker-run.sh"
+       ssh $ssh "docker run --name $name -d -v ~/$name/web/dist:/var/www/html -p $binding:80 zelejs/allin-web:slim"
     fi
 }
 
-allindeployapi(){
+deployapi(){
     ssh=$1
     name=$2
     binding=$3
-    link=$4
-    endpoint=$5
+    data=$4
 
+    # -----------------------------------------------
+    link=$5
     ## check link for target, http://url/fileName.jar
     if [ "$link"x == "{}"x ];then
         if [ -d target ];then 
@@ -122,6 +130,8 @@ allindeployapi(){
         echo "Invalid link url: $link !"
         exit
     fi
+    ## no lnk---------------------------------------
+
 
     ## check binding 
     if [ "$binding"x == "0"x ];then
@@ -129,7 +139,7 @@ allindeployapi(){
     fi
 
     ## make sure args ok
-    echo $ssh, $name, $binding, $link, $endpoing
+    echo $ssh, $name, $binding, $link
 
     ######################
     ## start deploy     ##
@@ -151,44 +161,70 @@ allindeployapi(){
     echo "=>scp $standalone $ssh:~/$name/api"
     scp $standalone $ssh:~/$name/api
 
-    ## check docker rnning
-    ip=$(ssh $ssh "docker inspect $name --format '{{.NetworkSettings.IPAddress}}'")
-    if [ $ip ];then
-       echo "=>docker restart $name"
-       ssh $ssh "docker restart $name"
-    else
-       echo "=>docker run --name $name -d -v ~/$name/api:/webapps -p $binding:8080 zelejs/allin-web-slim:latest"
-       ssh $ssh "docker run --name $name -d -v ~/$name/api:/webapps -p $binding:8080 zelejs/allin-web-slim:latest"
-    fi
+    ## run remote script
+    ALLIN=allin.deploy
+    ALLIN_BIN=$(readlink -f $0)
+    ALLIN_BIN=$(dirname $ALLIN_BIN)
+    ALLIN_BIN="$ALLIN_BIN/ssh/$ALLIN"
+    echo "=>scp ssh/$ALLIN $ssh:~/$name"
+    scp $ALLIN_BIN $ssh:~/$name
+    echo "=>bash ~/$name/$ALLIN api $name $binding && rm ~/$name/$ALLIN"
+    ssh $ssh "bash ~/$name/$ALLIN api $name $binding $data && rm ~/$name/$ALLIN"
 }
 
+genurl(){
+   db=$1
+   host=$2
+   port=$3
+   user=$4
+   password=$5
+
+   ## port
+   if [ "$port"x == "3306"x ];then
+      port=''
+   else
+      port=":$port"
+   fi
+
+   url="jdbc:mysql://$host$port/$db?user=$user&password=$password&autoReconnect=true&characterEncoding=utf8&allowMultiQueries=true"
+   echo $url
+}
+
+
 ## main
-if [[ $cmd == cmdallindeploy*  ]];then
+if [[ $cmd == cmddeploy*  ]];then
+    ssh=$3
+    name=$4
+
     it=''
     for arg in $@;do
-        if [ "$arg"x == "--ssh"x ];then
+         if [ "$arg"x == "--ssh"x ];then
            it=$arg
-        elif [ "$arg"x == "--name"x ];then
+         elif [ "$arg"x == "--name"x ];then
            it=$arg
-        elif [ "$arg"x == "--link"x ];then
+         elif [ "$arg"x == "--link"x ];then
            it=$arg
-        elif [ "$arg"x == "--binding"x ];then
+         elif [ "$arg"x == "--binding"x ];then
            it=$arg
-        elif [ "$arg"x == "--ep"x ];then
+         elif [ "$arg"x == "--endpoint"x ];then
+           it=$arg
+         elif [ "$arg"x == "--data"x ];then
            it=$arg
         fi
 
-        ## get the arg
-        if [ "$it"x == "--ssh"x ];then
-           ssh=$arg
-        elif [ "$it"x == "--name"x ];then
+         ## get the arg
+         if [ "$it"x == "--ssh"x ];then
+            ssh=$arg
+         elif [ "$it"x == "--name"x ];then
            name=$arg
-        elif [ "$it"x == "--link"x ];then
+         elif [ "$it"x == "--link"x ];then
            link=$arg
-        elif [ "$it"x == "--binding"x ];then
+         elif [ "$it"x == "--binding"x ];then
            binding=$arg
-        elif [ "$it"x == "--ep"x ];then
+         elif [ "$it"x == "--endpoint"x ];then
            endpoint=$arg
+         elif [ "$it"x == "--data"x ];then
+           data=$arg
         fi
     done
 
@@ -197,7 +233,7 @@ if [[ $cmd == cmdallindeploy*  ]];then
        exit
     fi
 
-    if [ ! $ssh == "*@*" ];then
+    if [[ ! $ssh == *\@* ]];then
        ssh="$ssh@127.0.0.1"
     fi
 
@@ -217,20 +253,42 @@ if [[ $cmd == cmdallindeploy*  ]];then
     fi
 
     ## for web
-    if [[ $cmd == cmdallindeployweb ]];then
-        allindeployweb $ssh $name $binding $link $endpoint 
-    fi
-
-    ## for api
-    if [[ $cmd == cmdallindeployweb ]];then
-
+    if [[ $cmd == cmddeployweb ]];then
         ## check endpoint
         if [ ! $endpoint ];then 
             endpoint='127.0.0.1:8080'
         fi
 
-        allindeployweb $ssh $name $binding $link 
+        deployweb $ssh $name $binding $link $endpoint 
     fi
+
+    ## for api
+    if [[ $cmd == cmddeployapi ]];then
+        deployapi $ssh $name $binding $link $data
+    fi
+
+elif [[ $cmd == cmdgenurl ]];then
+   db=$3
+   host=$4
+   port=$5
+   user=$6
+   password=$7
+
+   if [ ! $host ];then 
+        host=127.0.0.1
+   fi
+   if [ ! $port ];then
+      port=3306
+   fi
+   if [ ! $user ];then
+      user=root
+   fi
+   if [ ! $password ];then
+      password=root
+   fi
+
+   genurl $db $host $port $user $password
+
 else 
-    echo Unknown cmd: $cmd
+    echo "Unknown cmd: $cmd"
 fi
