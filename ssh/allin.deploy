@@ -81,8 +81,9 @@ else
 fi
 
 ## no port found, run again
-if [ ! $ok ];then
-   docker stop $name
-   docker rm $name
-   docker run --name $name -e MYSQL_URL=$data -d $used_binds $used_ports zelejs/allin-web:slim
-fi
+docker "=>docker stop $name"
+docker stop $name
+docker "=>docker rm $name"
+docker rm $name
+echo "=>docker run --name $name -e MYSQL_URL=$data -d $used_binds $used_ports zelejs/allin-web:slim"
+docker run --name $name -e MYSQL_URL=$data -d $used_binds $used_ports zelejs/allin-web:slim

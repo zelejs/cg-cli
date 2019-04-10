@@ -23,6 +23,7 @@ if [[ $cmd2 == deployweb ]];then
 
 elif [[ $cmd2 == deployapi ]];then
     cmd=cmddeployapi
+
 elif [[ $cmd2 == genurl ]];then   
     db=$3
     if [ ! $db ];then  
@@ -168,7 +169,7 @@ deployapi(){
     ALLIN_BIN="$ALLIN_BIN/ssh/$ALLIN"
     echo "=>scp ssh/$ALLIN $ssh:~/$name"
     scp $ALLIN_BIN $ssh:~/$name
-    echo "=>bash ~/$name/$ALLIN api $name $binding && rm ~/$name/$ALLIN"
+    echo "=>bash ~/$name/$ALLIN api $name $binding $data && rm ~/$name/$ALLIN"
     ssh $ssh "bash ~/$name/$ALLIN api $name $binding $data && rm ~/$name/$ALLIN"
 }
 
@@ -186,7 +187,7 @@ genurl(){
       port=":$port"
    fi
 
-   url="jdbc:mysql://$host$port/$db?user=$user&password=$password&autoReconnect=true&characterEncoding=utf8&allowMultiQueries=true"
+   url="jdbc:mysql://$host$port/$db?user=$user\&password=$password\&autoReconnect=true\&characterEncoding=utf8\&allowMultiQueries=true"
    echo $url
 }
 
@@ -247,24 +248,29 @@ if [[ $cmd == cmddeploy*  ]];then
        link='{}'
     fi
 
-    ## check binding
-    if [ ! $binding ];then
-       binding='0'
-    fi
-
     ## for web
     if [[ $cmd == cmddeployweb ]];then
         ## check endpoint
-        if [ ! $endpoint ];then 
+         if [ ! $endpoint ];then 
             endpoint='127.0.0.1:8080'
-        fi
+         fi
 
-        deployweb $ssh $name $binding $link $endpoint 
+         ## check binding
+         if [ ! $binding ];then
+            binding='8000'
+         fi
+
+        deployweb $ssh $name $binding $endpoint $link
     fi
 
     ## for api
     if [[ $cmd == cmddeployapi ]];then
-        deployapi $ssh $name $binding $link $data
+         ## check binding
+         if [ ! $binding ];then
+            binding='8080'
+         fi
+
+        deployapi $ssh $name $binding $data $link
     fi
 
 elif [[ $cmd == cmdgenurl ]];then
