@@ -6,8 +6,8 @@ usage() {
     echo "       allin-cli deploy api <user@host> <name> [OPTIONS]"
     echo "       allin-cli gen url <db> [127.0.0.1] [3306] [root] [root]"
     echo "  OPTIONS"
-    echo "      --binding  port [8000] for web, [8080] for api"
-    echo "      --data     url  [jdbc:mysql://127.0.0.1/test?user=root&password=root&characterEncoding=utf8"]
+    echo "      --binding   port [8000] for web, [8080] for api"
+    echo "      --data      url  [jdbc:mysql://127.0.0.1/test?user=root&password=root&characterEncoding=utf8"]
     echo "      --endpoint api  [127.0.0.1:8080] only for web"
     exit
 }
@@ -110,6 +110,10 @@ deployapi(){
     name=$2
     binding=$3
     data=$4
+    ## & from \&
+    if [ $data ];then
+      data=${data//\&/\\\&}
+    fi
 
     # -----------------------------------------------
     link=$5
@@ -167,7 +171,7 @@ deployapi(){
     ALLIN_BIN=$(readlink -f $0)
     ALLIN_BIN=$(dirname $ALLIN_BIN)
     ALLIN_BIN="$ALLIN_BIN/ssh/$ALLIN"
-    echo "=>scp ssh/$ALLIN $ssh:~/$name"
+    echo "=>scp $ALLIN_BIN $ssh:~/$name"
     scp $ALLIN_BIN $ssh:~/$name
     echo "=>bash ~/$name/$ALLIN api $name $binding $data && rm ~/$name/$ALLIN"
     ssh $ssh "bash ~/$name/$ALLIN api $name $binding $data && rm ~/$name/$ALLIN"
@@ -194,8 +198,14 @@ genurl(){
 
 ## main
 if [[ $cmd == cmddeploy*  ]];then
-    ssh=$3
-    name=$4
+   ssh=$3
+   name=$4
+   if [[ $ssh == --* ]];then
+      usage
+   fi
+   if [[ $name == --* ]];then
+      usage
+   fi
 
     it=''
     for arg in $@;do

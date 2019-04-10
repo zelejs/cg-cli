@@ -12,9 +12,11 @@ fi
 ip=$(docker inspect $name --format '{{.NetworkSettings.IPAddress}}')
 if [ ! $ip ];then
    if [[ $cmd == api ]];then
-      docker run --name $name -d -v ~/$name/api:/webapps -p $binding:$PORT zelejs/allin-web:slim
+      echo "=>docker run --name $name -d -e MYSQL_URL=$data -v ~/$name/api:/webapps -p $binding:$PORT zelejs/allin-web:slim"
+      docker run --name $name -d -e MYSQL_URL=$data  -v ~/$name/api:/webapps -p $binding:$PORT zelejs/allin-web:slim
    elif [[ $cmd == web ]];then
-      docker run --name $name -d -v ~/$name/web:/var/html/www -p $binding:$PORT zelejs/allin-web:slim
+      echo "=>docker run --name $name -d -e MYSQL_URL=$data -v ~/$name/web:/var/html/www -p $binding:$PORT zelejs/allin-web:slim"
+      docker run --name $name -d -e MYSQL_URL=$data -v ~/$name/web:/var/html/www -p $binding:$PORT zelejs/allin-web:slim
    fi
    exit
 fi
@@ -81,9 +83,9 @@ else
 fi
 
 ## no port found, run again
-docker "=>docker stop $name"
+echo "=>docker stop $name"
 docker stop $name
-docker "=>docker rm $name"
+echo "=>docker rm $name"
 docker rm $name
 echo "=>docker run --name $name -e MYSQL_URL=$data -d $used_binds $used_ports zelejs/allin-web:slim"
 docker run --name $name -e MYSQL_URL=$data -d $used_binds $used_ports zelejs/allin-web:slim
