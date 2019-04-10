@@ -7,7 +7,7 @@ usage() {
     echo "       allin-cli gen url <db> [127.0.0.1] [3306] [root] [root]"
     echo "  OPTIONS"
     echo "      --binding   port [8000] for web, [8080] for api"
-    echo "      --data      url  [jdbc:mysql://127.0.0.1/test?user=root&password=root&characterEncoding=utf8"]
+    echo "      --data-url  url  [jdbc:mysql://127.0.0.1/test?user=root&password=root&characterEncoding=utf8"]
     echo "      --endpoint api  [127.0.0.1:8080] only for web"
     exit
 }
@@ -219,7 +219,7 @@ if [[ $cmd == cmddeploy*  ]];then
            it=$arg
          elif [ "$arg"x == "--endpoint"x ];then
            it=$arg
-         elif [ "$arg"x == "--data"x ];then
+         elif [ "$arg"x == "--data-url"x ];then
            it=$arg
         fi
 
@@ -234,7 +234,7 @@ if [[ $cmd == cmddeploy*  ]];then
            binding=$arg
          elif [ "$it"x == "--endpoint"x ];then
            endpoint=$arg
-         elif [ "$it"x == "--data"x ];then
+         elif [ "$it"x == "--data-url"x ];then
            data=$arg
         fi
     done
