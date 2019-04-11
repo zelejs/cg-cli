@@ -4,15 +4,17 @@ cmd=$1
 usage() {
     echo "Usage: allin-cli deploy <package> <user@host> <name> [OPTIONS]"
     echo "       allin-cli gen url <db> [127.0.0.1] [3306] [root] [root]"
+    echo "       allin-cli docker restart <user@host> <name>"
     echo "       allin-cli docker stop <user@host> <name>"
     echo "       allin-cli docker rm <user@host> <name>"
     echo "  OPTIONS"
     echo "      --binding   binding port, DEFAUTL [8000] for web, and [8080] for api"
     echo "      --data-url  mysql db url, DEFAULT [jdbc:mysql://127.0.0.1/test?user=root&password=root&characterEncoding=utf8"]
+    echo "                  short input [127.0.0.1/db]"
     echo "      --endpoint  api endpoint only for web, DEFAULT [127.0.0.1:8080] "
-    echo "      --token     access token only for web"
+    echo "      --token     access token only for web, --token . means gen token auto"
     echo "  TIPS"
-    echo "      e.g. allin-cli deploy . craftperson@127.0.0.1 docker_name  ## . means search local"
+    echo "      e.g. allin-cli deploy . craftperson@127.0.0.1 docker_name --token . --data-url 127.0.0.1/db"
     exit
 }
 
@@ -28,6 +30,12 @@ if [[ $cmd == deploy ]];then
    if [ ! $4 ];then 
       usage
    fi
+elif [[ $cmd2 == dockerrestart ]];then   
+    name=$3
+    if [ ! $name ];then  
+        usage
+    fi
+    cmd=cmddockerrestart
 elif [[ $cmd2 == dockerstop ]];then   
     name=$3
     if [ ! $name ];then  
@@ -148,6 +156,12 @@ deployapi(){
     #ssh $ssh "bash ~/$name/$ALLIN $standalone $name $binding $data && rm ~/$name/$ALLIN"
     echo "=>bash ~/$name/$ALLIN $standalone $name $binding $data"
     ssh $ssh "bash ~/$name/$ALLIN $standalone $name $binding $data"
+}
+
+dockerrestart() {
+   ssh=$1
+   name=$2
+   ssh $ssh "docker restart $name"
 }
 
 dockerstop() {
@@ -340,6 +354,13 @@ if [[ $cmd == cmddeploy ]];then
          
         deployapi $package $ssh $name $binding $data
     fi
+elif [[ $cmd == cmddockerrestart ]];then
+   ssh=$3
+   name=$4
+   if [[ ! $ssh == *\@* ]];then
+      ssh="$ssh@127.0.0.1"
+   fi
+   dockerrestart $ssh $name
 elif [[ $cmd == cmddockerstop ]];then
    ssh=$3
    name=$4
