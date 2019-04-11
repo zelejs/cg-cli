@@ -7,10 +7,12 @@ usage() {
   echo "    cg-cli module set <module-name> [parent-module]"
   echo "    cg-cli db get url"
   echo "    cg-cli db set url <database> [localhost] [3306] [root] [root]"
-  echo "    cg-cli db sanity"
+  echo "    cg-cli db sanity [url]"
   echo "    cg-cli db run sql [/path/to/schema.sql] [param] ..."
   echo "    cg-cli db show tables"
   echo "    cg-cli db show create table <table-name>"
+  echo "    cg-cli db gen token <data-url> <user>"
+  echo "    cg-cli db gen perms <data-url> <user>"
   echo "    cg-cli crud reset"
   echo "    cg-cli crud one      <master> [...]"
   echo "    cg-cli crud onemany  <master> <slave:mid:id> [slave:mid1,mid2] [slave:relation::mid:id] [...]"
@@ -39,6 +41,8 @@ usage_db() {
   echo "    cg-cli db run sql [/path/to/schema.sql]"
   echo "    cg-cli db show tables"
   echo "    cg-cli db show create table <table-name>"
+  echo "    cg-cli db gen token <data-url> <user>"
+  echo "    cg-cli db gen perms <data-url> <user>"
 }
 usage_crud() {
   echo "Usage:"
@@ -105,8 +109,12 @@ if [ "$cmd"x == "module"x ];then
 
 elif [ "$cmd"x == "db"x  ];then
    subcmd=$2$3
+   subcmd_1=$2
 
-   if [ "$subcmd"x == "geturl"x ];then
+   if [ "$subcmd_1"x == "sanity"x ];then
+      cmd=dbsanity
+
+   elif [ "$subcmd"x == "geturl"x ];then
       cmd=dbgeturl
 
    elif [ "$subcmd"x == "seturl"x ];then
@@ -127,10 +135,6 @@ elif [ "$cmd"x == "db"x  ];then
          fi
       fi
       cmd=dbseturl
-
-   elif [ "$subcmd"x == "sanity"x ];then
-      cmd=dbsanity
-
    elif [ "$subcmd"x == "runsql"x ];then
       cmd=dbrunsql
 
@@ -153,6 +157,27 @@ elif [ "$cmd"x == "db"x  ];then
          echo "    cg-cli db show create table <table-name>"
          exit
       fi
+   elif [ "$subcmd"x == "gentoken"x ];then
+       dataurl=$4
+       user=$5
+
+       if [ ! $user ];then
+         echo "    cg-cli db gen token <data-url> <user>"
+         exit
+       fi
+
+       cmd=dbgentoken
+
+   elif [ "$subcmd"x == "genperms"x ];then   
+       dataurl=$4
+       user=$5
+
+       if [ ! $user ];then
+         echo "    cg-cli db gen perms <data-url> <user>"
+         exit
+       fi
+
+       cmd=dbgenperms
 
    else 
          usage_db
@@ -655,6 +680,67 @@ dbshowcreatetable() {
     echo $result | tr '!' '\n'
 }
 
+fix_data_url() {
+    data=$1
+    
+    ## handle data
+    if [[ $data == jdbc:* ]];then
+       data=$data
+    elif [[ $data == [0-9.a-z]*/* ]];then
+       data_name=${data#*/}  ## remove all before /
+       data_host=${data%/*}  ## remove all after /
+       data="jdbc:mysql://$data_host/$data_name?user=root&password=root&autoReconnect=true&characterEncoding=utf8&allowMultiQueries=true"
+    fi
+    echo $data
+}
+
+dbgentoken() {
+   dataurl=$1
+   user=$2
+   ## fix data url
+   dataurl=$(fix_data_url $dataurl)
+
+   schemasql="select tenant_id,id,account from user where account='$user'"
+
+   result=$($dir/mysql-test/bin/mysql-test $dataurl "$schemasql")
+   result=${result//\'/}
+   result=${result/\|/ }
+   result=${result/\|/ }
+
+   token=$(java -jar $dir/local/genToken.jar $result 72h)
+   echo $token
+}
+
+dbgenperms() {
+   dataurl=$1
+   user=$2
+   ## fix data url
+   dataurl=$(fix_data_url $dataurl)
+
+   schemasql="select perm.identifier from user \
+   LEFT JOIN user_role ON user_role.userid=user.id \
+   LEFT JOIN role ON user_role.roleid=role.id \
+   LEFT JOIN role_perm ON role_perm.roleid=role.id \
+   LEFT JOIN perm ON perm.id=role_perm.permid WHERE account='$user'"
+
+   result=$($dir/mysql-test/bin/mysql-test $dataurl "$schemasql")
+   #ok=$(perl -ne "if(/^ext[\r\n]$/){next;}s/[\r\n\s\t]$/ /;print;" $list)
+
+   result=${result//[$'\t\r\n']/ }
+
+   perms=''
+   for it in $result;do
+       perms="$perms \"$it\","
+   done
+
+   #perms=${perms/ /\[}  ## replace first space with [ 
+   perms=${perms#* }  ## replace first space with [ 
+   perms=${perms%,*}    ## remove the last ,
+   
+   echo "[$perms]"
+}
+
+
 crudinitializetable() {
    if [ "$gen"x == "--gen"x ];then
       echo "mvn -Dinit=true com.jfeat:sb-code-generator:1.3.4:generate -f $pom"
@@ -705,6 +791,24 @@ gen() {
 }
 
 
+genurl(){
+   db=$1
+   host=$2
+   port=$3
+   user=$4
+   password=$5
+
+   ## port
+   if [ "$port"x == "3306"x ];then
+      port=''
+   else
+      port=":$port"
+   fi
+
+   url="jdbc:mysql://$host$port/$db?user=$user\&password=$password\&autoReconnect=true\&characterEncoding=utf8\&allowMultiQueries=true"
+   echo $url
+}
+
 ### main ##
 
 ## check test init first
@@ -726,7 +830,8 @@ elif [ "$cmd"x == "dbseturl"x ];then
    dbseturl $@
 
 elif [ "$cmd"x == "dbsanity"x ];then
-   dbsanity
+   url=$3
+   dbsanity $url
 
 elif [ "$cmd"x == "dbrunsql"x ];then
     schema=$4
@@ -742,6 +847,24 @@ elif [ "$cmd"x == "dbshowtables"x ];then
 elif [ "$cmd"x == "dbshowcreatetable"x ];then
    tab=$5
    dbshowcreatetable $url $tab
+
+elif [ "$cmd"x == "dbgentoken"x ];then
+   dataurl=$4
+   user=$5
+   if [ ! $user ];then
+      user=admin
+   fi
+
+   dbgentoken $dataurl $user
+
+elif [ "$cmd"x == "dbgenperms"x ];then
+   dataurl=$4
+   user=$5
+   if [ ! $user ];then
+      user=admin
+   fi
+
+   dbgenperms $dataurl $user
 
 elif [ "$cmd"x == "crudreset"x ];then
    echo done #do nothing

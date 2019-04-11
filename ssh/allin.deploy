@@ -16,7 +16,8 @@ fi
 
 ## get package from url
 if [[ $package == https://* ]];then
-   cd ~/$name
+   cd ~/$name/web
+
    packname=$(basename $package)
    if [ -f $packname ];then 
       rm $packname
@@ -47,6 +48,12 @@ if [[ $package == https://* ]];then
    fi
 fi
 
+## check dist exists
+if [ ! -d ~/$name/web/dist ];then
+   echo "~/$name/web/dist not exists"
+   exit
+fi
+
 ## check docker rnning
 ip=$(docker inspect $name --format '{{.NetworkSettings.IPAddress}}')
 if [ ! $ip ];then
@@ -54,8 +61,8 @@ if [ ! $ip ];then
       echo "=>docker run --name $name -d -e MYSQL_URL=$data -v ~/$name/api:/webapps -p $binding:$PORT zelejs/allin-web:slim"
       docker run --name $name -d -e MYSQL_URL=$data  -v ~/$name/api:/webapps -p $binding:$PORT zelejs/allin-web:slim
    elif [[ $cmd == web ]];then
-      echo "=>docker run --name $name -d -v ~/$name/web:/var/html/www -p $binding:$PORT zelejs/allin-web:slim"
-      docker run --name $name -d -v ~/$name/web:/var/html/www -p $binding:$PORT zelejs/allin-web:slim
+      echo "=>docker run --name $name -v ~/$name/web/dist:/var/www/html -p $binding:$PORT -d zelejs/allin-web:slim"
+      docker run --name $name -v ~/$name/web/dist:/var/www/html -p $binding:$PORT -d zelejs/allin-web:slim
    fi
    exit
 fi
@@ -118,11 +125,20 @@ gen_used_binds() {
 }
 
 used_binds=$(gen_used_binds $name)
-if [[ $used_binds == */webapps* ]];then
-    ## ok
-    used_binds=$used_binds
-else
-   used_binds="$used_binds -v ~/$name/api:/webapps"
+if [[ $cmd == api ]];then
+   if [[ $used_binds == */webapps* ]];then
+      ## ok
+      used_binds=$used_binds
+   else
+      used_binds="$used_binds -v ~/$name/api:/webapps"
+   fi
+elif  [[ $cmd == web ]];then
+   if [[ $used_binds == */var/www/html* ]];then
+      ## ok
+      used_binds=$used_binds
+   else
+      used_binds="$used_binds -v ~/$name/web/dist:/var/www/html"
+   fi
 fi
 ## end volume binds #########################
 

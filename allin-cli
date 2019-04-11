@@ -4,11 +4,15 @@ cmd=$1
 usage() {
     echo "Usage: allin-cli deploy <package> <user@host> <name> [OPTIONS]"
     echo "       allin-cli gen url <db> [127.0.0.1] [3306] [root] [root]"
+    echo "       allin-cli docker stop <user@host> <name>"
+    echo "       allin-cli docker rm <user@host> <name>"
     echo "  OPTIONS"
     echo "      --binding   binding port, DEFAUTL [8000] for web, and [8080] for api"
     echo "      --data-url  mysql db url, DEFAULT [jdbc:mysql://127.0.0.1/test?user=root&password=root&characterEncoding=utf8"]
     echo "      --endpoint  api endpoint only for web, DEFAULT [127.0.0.1:8080] "
     echo "      --token     access token only for web"
+    echo "  TIPS"
+    echo "      e.g. allin-cli deploy . craftperson@127.0.0.1 docker_name  ## . means search local"
     exit
 }
 
@@ -19,8 +23,23 @@ fi
 cmd2=$1$2
 
 if [[ $cmd == deploy ]];then
-    cmd=cmddeploy
+   cmd=cmddeploy
 
+   if [ ! $4 ];then 
+      usage
+   fi
+elif [[ $cmd2 == dockerstop ]];then   
+    name=$3
+    if [ ! $name ];then  
+        usage
+    fi
+    cmd=cmddockerstop
+elif [[ $cmd2 == dockerrm ]];then   
+    name=$3
+    if [ ! $name ];then  
+        usage
+    fi
+    cmd=cmddockerrm  
 elif [[ $cmd2 == genurl ]];then   
     db=$3
     if [ ! $db ];then  
@@ -43,27 +62,38 @@ deployweb(){
     binding=$4
     endpoint=$5
     token=$6
+    perms=$7
 
     ## make sure args ok
-    echo $package, $ssh, $name, $binding, $endpoing
+    echo $package, $ssh, $name, $binding, $endpoint
 
     ## ready for the path
     echo "=>ssh $ssh \"mkdir -p ~/$name/web\""
     ssh $ssh "if [ ! -d ~/$name/web ];then mkdir -p  ~/$name/web; elif [ -d ~/$name/web/dist ];then rm -rf ~/$name/web/dist; fi"
     
     ## cp dist to ssh
-    echo "=>tar zxvf dist.tar.gz dist"
-    tar zxvf dist.tar.gz dist
-    echo "=>scp dist.tar.gz $ssh:~/$name/web"
-    scp dist.tar.gz $ssh:~/$name/web
-    echo "=>ssh $ssh \"cd ~/$name/web && tar zxvf dist.tar.gz && rm dist.tar.gz\""
-    ssh $ssh "cd ~/$name/web && tar zxvf dist.tar.gz && rm dist.tar.gz && echo \"windows.MC={}\" > dist/config.js \
-    && echo \"windows.MC.HOST=$endpoint\" >> dist/config.js \
-    && echo \"windows.MC.ACCESS_TOKEN=$token\" >> dist/config.js"
+    if [[ $package == dist ]];then
+      ## only when endpoint or token is provided
+      if [ $token ];then
+         echo "window.MC={}" > dist/config.js
+         echo "window.MC.HOST='$endpoint'" >> dist/config.js
+         echo "window.MC.ACCESS_TOKEN='$token'" >> dist/config.js
+         echo "window.MC.PERMISSIONS='$perms'" >> dist/config.js
+         cat dist/config.js
+      fi
+
+      echo "=>tar zcvf dist.tar.gz dist"
+      tar zcvf dist.tar.gz dist
+      echo "=>scp dist.tar.gz $ssh:~/$name/web"
+      scp dist.tar.gz $ssh:~/$name/web
+      echo "=>ssh $ssh \"cd ~/$name/web && if [ -f dist/config.js ];then cp dist/config.js .;fi && tar zxvf dist.tar.gz && rm dist.tar.gz && if [ ! -f dist/config.js ];then mv config.js dist/config.js;fi\""
+      ssh $ssh "cd ~/$name/web && if [ -f dist/config.js ];then cp dist/config.js .;fi && tar zxvf dist.tar.gz && rm dist.tar.gz && if [ ! -f dist/config.js ];then mv config.js dist/config.js;fi"
+      echo "=>ssh $ssh \"cd ~/$name/web && if [ -f dist/config.js ];then cp dist/config.js .;fi && tar zxvf dist.tar.gz && rm dist.tar.gz && if [ ! -f dist/config.js ];then mv config.js dist/config.js;fi\""
+    fi
 
     ## run docker if no docker $name
     ## run remote script
-    ALLIN=allin.deploy.sh
+    ALLIN=allin.deploy
     ALLIN_BIN=$(readlink -f $0)
     ALLIN_BIN=$(dirname $ALLIN_BIN)
     ALLIN_BIN="$ALLIN_BIN/ssh/$ALLIN"
@@ -118,6 +148,18 @@ deployapi(){
     #ssh $ssh "bash ~/$name/$ALLIN $standalone $name $binding $data && rm ~/$name/$ALLIN"
     echo "=>bash ~/$name/$ALLIN $standalone $name $binding $data"
     ssh $ssh "bash ~/$name/$ALLIN $standalone $name $binding $data"
+}
+
+dockerstop() {
+   ssh=$1
+   name=$2
+   ssh $ssh "docker stop $name"
+}
+
+dockerrm() {
+   ssh=$1
+   name=$2
+   ssh $ssh "docker rm $name"
 }
 
 genurl(){
@@ -242,11 +284,25 @@ if [[ $cmd == cmddeploy ]];then
        ssh="$ssh@127.0.0.1"
     fi
 
+    ## handle data
+    if [[ $data == jdbc:* ]];then
+       data=$data
+    elif [[ $data == [0-9.a-z]*/* ]];then
+       data_name=${data#*/}  ## remove all before /
+       data_host=${data%/*}  ## remove all after /
+       data=$(genurl $data_name $data_host '3306' 'root' 'root')
+    fi
+
     ## for web
     if [[ $cmd == cmddeployweb ]];then
         ## check endpoint
          if [ ! $endpoint ];then 
-            endpoint='127.0.0.1:8080'
+            endpoint='http://127.0.0.1:8080'
+         fi
+         if [ $endpoint == http://* ];then 
+            endpoint=$endpoint
+         else
+            endpoint="http://$endpoint"
          fi
 
          ## check binding
@@ -256,7 +312,21 @@ if [[ $cmd == cmddeploy ]];then
             binding='8000'
          fi
 
-        deployweb $package $ssh $name $binding $endpoint $token
+         ## get token 
+         if [[ $token == . ]];then
+            if [ ! $data ];then 
+               echo --data-url is not set
+               exit
+            fi
+
+            ## auto generate
+            localurl=${data//\\\&/\&}
+            token=$(cg-cli db gen token $localurl admin)
+            perms=$(cg-cli db gen perms $localurl admin)
+         fi
+
+         ## deploy web 
+         deployweb $package $ssh $name $binding $endpoint $token $perms
     fi
 
     ## for api
@@ -267,19 +337,23 @@ if [[ $cmd == cmddeploy ]];then
          elif [[ $binding == 0 ]];then
             binding='8080'
          fi
-
-         ## handle data
-         if [[ $data == jdbc:* ]];then
-            data=$data
-         elif [[ $data == [0-9.a-z]*/* ]];then
-            data_name=${data#*/}  ## remove all before /
-            data_host=${data%/*}  ## remove all after /
-            data=$(genurl $data_name $data_host '3306' 'root' 'root')
-         fi
-
+         
         deployapi $package $ssh $name $binding $data
     fi
-
+elif [[ $cmd == cmddockerstop ]];then
+   ssh=$3
+   name=$4
+   if [[ ! $ssh == *\@* ]];then
+      ssh="$ssh@127.0.0.1"
+   fi
+   dockerstop $ssh $name
+elif [[ $cmd == cmddockerrm ]];then
+   ssh=$3
+   name=$4
+   if [[ ! $ssh == *\@* ]];then
+      ssh="$ssh@127.0.0.1"
+   fi
+   dockerrm $ssh $name
 elif [[ $cmd == cmdgenurl ]];then
    db=$3
    host=$4
