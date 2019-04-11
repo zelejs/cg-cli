@@ -1,11 +1,50 @@
-cmd=$1
+package=$1
 name=$2
 binding=$3
+if [[ $package == *.jar ]];then  
+    cmd=api
+else
+    cmd=web
+fi
+## less effect 
 if [[ $cmd == api ]];then
    PORT='8080'
    data=$4
 elif [[ $cmd == web ]];then
    PORT='80'
+fi
+
+## get package from url
+if [[ $package == https://* ]];then
+   cd ~/$name
+   packname=$(basename $package)
+   if [ -f $packname ];then 
+      rm $packname
+   fi
+   wget $package
+
+   ## extract
+   if [[ $packname == *.jar ]];then
+      mv $packname api
+   else
+      if [ -d dist ];then
+         rm -rf dist
+      fi
+      if [[ $packname == *.zip ]];then
+         unzip $packname
+      elif [[ $packname == *.tar ]];then
+         tar xvf $package
+      elif [[ $packname == *.tar.gz ]];then
+         tar zxvf $package
+      fi
+
+      ## make sure dist is sucessful
+      rm $packname
+      if [ ! -d dist ];then
+         echo "unzip $packname failure !"
+         exit
+      fi
+   fi
 fi
 
 ## check docker rnning
@@ -15,12 +54,14 @@ if [ ! $ip ];then
       echo "=>docker run --name $name -d -e MYSQL_URL=$data -v ~/$name/api:/webapps -p $binding:$PORT zelejs/allin-web:slim"
       docker run --name $name -d -e MYSQL_URL=$data  -v ~/$name/api:/webapps -p $binding:$PORT zelejs/allin-web:slim
    elif [[ $cmd == web ]];then
-      echo "=>docker run --name $name -d -e MYSQL_URL=$data -v ~/$name/web:/var/html/www -p $binding:$PORT zelejs/allin-web:slim"
-      docker run --name $name -d -e MYSQL_URL=$data -v ~/$name/web:/var/html/www -p $binding:$PORT zelejs/allin-web:slim
+      echo "=>docker run --name $name -d -v ~/$name/web:/var/html/www -p $binding:$PORT zelejs/allin-web:slim"
+      docker run --name $name -d -v ~/$name/web:/var/html/www -p $binding:$PORT zelejs/allin-web:slim
    fi
    exit
 fi
 
+######################################
+## find port binds
 gen_used_ports() {
    ports=$(docker port $name)
    ports=${ports// -> /->}
@@ -58,8 +99,10 @@ fi
 if [[ $used_ports == *:$PORT* ]];then
     used_ports=${used_ports//[[:digit:]]*:$PORT/$binding:$PORT}
 fi
+## end port binds #########################
 
 
+######################################
 ## find volume binds
 gen_used_binds() {
     name=$1
@@ -81,11 +124,56 @@ if [[ $used_binds == */webapps* ]];then
 else
    used_binds="$used_binds -v ~/$name/api:/webapps"
 fi
+## end volume binds #########################
+
+######################################
+## find envs
+gen_used_envs() {
+    name=$1
+    envs=$(docker inspect $name --format '{{ .Config.env}}')
+    envs=${envs//\[/}  ## remove [
+    envs=${envs//\]/}  ## remove ]
+
+    new_envs=''
+    for bind in $binds;do
+        if [[ $bind == TZ=* ]];then 
+           continue
+        fi
+        if [[ $bind == LANG=* ]];then 
+           continue
+        fi
+        if [[ $bind == PATH=* ]];then 
+           continue
+        fi
+        if [[ $bind == JAVA* ]];then 
+           continue
+        fi
+        ## split =
+        ENV_NAME=${bind%=*}
+        ENV_VALUE=${bind#*=}
+
+        new_envs="$new_envs -e $ENV_NAME $ENV_VALUE"
+    done
+    echo $new_envs
+}
+
+used_envs=$(gen_used_envs $name)
+
+if [[ $cmd == api ]];then
+   if [[ $used_envs == *MYSQL_URL* ]];then
+      ## ok
+      used_envs=$used_envs
+   else
+      used_envs="$used_envs -e MYSQL_URL=$data "
+   fi
+fi
+## end volume binds #########################
+
 
 ## no port found, run again
 echo "=>docker stop $name"
 docker stop $name
 echo "=>docker rm $name"
 docker rm $name
-echo "=>docker run --name $name -e MYSQL_URL=$data -d $used_binds $used_ports zelejs/allin-web:slim"
-docker run --name $name -e MYSQL_URL=$data -d $used_binds $used_ports zelejs/allin-web:slim
+echo "=>docker run --name $name $used_envs $used_binds $used_ports -d zelejs/allin-web:slim"
+docker run --name $name $used_envs $used_binds $used_ports -d zelejs/allin-web:slim

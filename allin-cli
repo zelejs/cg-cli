@@ -2,13 +2,13 @@
 cmd=$1
 
 usage() {
-    echo "Usage: allin-cli deploy web <user@host> <name> [OPTIONS]"
-    echo "       allin-cli deploy api <user@host> <name> [OPTIONS]"
+    echo "Usage: allin-cli deploy <package> <user@host> <name> [OPTIONS]"
     echo "       allin-cli gen url <db> [127.0.0.1] [3306] [root] [root]"
     echo "  OPTIONS"
-    echo "      --binding   port [8000] for web, [8080] for api"
-    echo "      --data-url  url  [jdbc:mysql://127.0.0.1/test?user=root&password=root&characterEncoding=utf8"]
-    echo "      --endpoint api  [127.0.0.1:8080] only for web"
+    echo "      --binding   binding port, DEFAUTL [8000] for web, and [8080] for api"
+    echo "      --data-url  mysql db url, DEFAULT [jdbc:mysql://127.0.0.1/test?user=root&password=root&characterEncoding=utf8"]
+    echo "      --endpoint  api endpoint only for web, DEFAULT [127.0.0.1:8080] "
+    echo "      --token     access token only for web"
     exit
 }
 
@@ -18,11 +18,8 @@ fi
 
 cmd2=$1$2
 
-if [[ $cmd2 == deployweb ]];then
-    cmd=cmddeployweb
-
-elif [[ $cmd2 == deployapi ]];then
-    cmd=cmddeployapi
+if [[ $cmd == deploy ]];then
+    cmd=cmddeploy
 
 elif [[ $cmd2 == genurl ]];then   
     db=$3
@@ -40,103 +37,54 @@ fi
 #PEM=$dir/ssh/use-ci-jenkins-deploy.pem
 
 deployweb(){
-    ssh=$1
-    name=$2
-    binding=$3
-    link=$4
+    package=$1
+    ssh=$2
+    name=$3
+    binding=$4
     endpoint=$5
-
-    ## check link for dist, http://url/fileName.zip
-    if [ "$link"x == "{}"x ];then
-        if [ -d dist ];then 
-           link='dist'
-        else
-           echo "dist not exists"
-           exit
-        fi
-
-    elif [[ $link == "http://*" ]];then
-       if [[ $link == *.tar || $link == *.tar.gz || $link == *.zip ]];then 
-           link=$link
-       else
-          echo "Invalid link url: $link !"
-       fi
-    else  
-        echo "Invalid link url: $link !"
-        exit
-    fi
-
-    ## check binding 
-    if [ "$binding"x == "0"x ];then
-        binding='8000'
-    fi
-
+    token=$6
 
     ## make sure args ok
-    echo $ssh, $name, $binding, $link, $endpoing
-
-    ######################
-    ## start deploy     ##
-    ######################
-
-    ## cp dist/target/*.jar to ssh
-    echo "=>tar zcvf dist.tar.gz dist"
-    tar zcvf dist.tar.gz dist
+    echo $package, $ssh, $name, $binding, $endpoing
 
     ## ready for the path
     echo "=>ssh $ssh \"mkdir -p ~/$name/web\""
     ssh $ssh "if [ ! -d ~/$name/web ];then mkdir -p  ~/$name/web; elif [ -d ~/$name/web/dist ];then rm -rf ~/$name/web/dist; fi"
     
     ## cp dist to ssh
+    echo "=>tar zxvf dist.tar.gz dist"
+    tar zxvf dist.tar.gz dist
     echo "=>scp dist.tar.gz $ssh:~/$name/web"
     scp dist.tar.gz $ssh:~/$name/web
     echo "=>ssh $ssh \"cd ~/$name/web && tar zxvf dist.tar.gz && rm dist.tar.gz\""
-    ssh $ssh "cd ~/$name/web && tar zxvf dist.tar.gz && rm dist.tar.gz && echo \"windows.MC={}\" > dist/config.js && echo \"windows.MC.HOST=$endpoint\" >> dist/config.js"
+    ssh $ssh "cd ~/$name/web && tar zxvf dist.tar.gz && rm dist.tar.gz && echo \"windows.MC={}\" > dist/config.js \
+    && echo \"windows.MC.HOST=$endpoint\" >> dist/config.js \
+    && echo \"windows.MC.ACCESS_TOKEN=$token\" >> dist/config.js"
 
     ## run docker if no docker $name
-    ip=$(ssh $ssh "docker inspect $name --format '{{.NetworkSettings.IPAddress}}'")
-    if [ $ip ];then
-       echo "=>docker restart $name"
-       ssh $ssh "docker restart $name"
-    else
-       echo "=>docker run --name $name -d -v ~/$name/web/dist:/var/www/html -p $binding:80 zelejs/allin-web:slim"
-       ssh $ssh "echo \"docker run --name $name -d -v ~/$name/web/dist:/var/www/html -p $binding:80 zelejs/allin-web:slim\" > docker-run.sh"
-       ssh $ssh "docker run --name $name -d -v ~/$name/web/dist:/var/www/html -p $binding:80 zelejs/allin-web:slim"
-    fi
+    ## run remote script
+    ALLIN=allin.deploy.sh
+    ALLIN_BIN=$(readlink -f $0)
+    ALLIN_BIN=$(dirname $ALLIN_BIN)
+    ALLIN_BIN="$ALLIN_BIN/ssh/$ALLIN"
+    echo "=>scp $ALLIN_BIN $ssh:~/$name"
+    scp $ALLIN_BIN $ssh:~/$name
+    echo "=>bash ~/$name/$ALLIN $package $name $binding && rm ~/$name/$ALLIN"
+    ssh $ssh "bash ~/$name/$ALLIN $package $name $binding && rm ~/$name/$ALLIN"
 }
 
 deployapi(){
-    ssh=$1
-    name=$2
-    binding=$3
-    data=$4
-    ## & from \&
-    if [ $data ];then
-      data=${data//\&/\\\&}
-    fi
+   standalone=$1
+   ssh=$2
+   name=$3
+   binding=$4
+   data=$5
 
-    # -----------------------------------------------
-    link=$5
-    ## check link for target, http://url/fileName.jar
-    if [ "$link"x == "{}"x ];then
-        if [ -d target ];then 
-           link='target'
-        else
-           echo "--link url not provided !"
-           exit
-        fi
-    elif [[ $link == "http://*" ]];then
-       if [[ $link == *.tar || $link == *.tar.gz || $link == *.zip ]];then 
-          link=$link
-       else
-          echo "Invalid link url: $link !"
-       fi
-    else  
-        echo "Invalid link url: $link !"
-        exit
-    fi
-    ## no lnk---------------------------------------
+   ## & from \&
 
+   #  if [ $data ];then
+   #    data=${data//\&/\\\&}
+   #  fi
 
     ## check binding 
     if [ "$binding"x == "0"x ];then
@@ -144,27 +92,20 @@ deployapi(){
     fi
 
     ## make sure args ok
-    echo $ssh, $name, $binding, $link
-
-    ######################
-    ## start deploy     ##
-    ######################
+    echo $standalone, $ssh, $name, $binding, $data
 
     ## cp dist/target/*.jar to ssh
     ## ready for the path
     echo "=>ssh $ssh \"mkdir -p ~/$name/api\""
     ssh $ssh "if [ ! -d ~/$name/api ];then mkdir -p  ~/$name/api; fi"
 
-    ## find standalone 
-    standalone=$(find target -name "*-standalone.jar")
-    if [ ! $standalone ];then
-        echo no standalone jar !
-        exit
-    fi
-    
     ## cp dist to ssh
-    echo "=>scp $standalone $ssh:~/$name/api"
-    scp $standalone $ssh:~/$name/api
+    if [[ $standalone == target/*-standalone.jar ]];then
+      echo "=>scp $standalone $ssh:~/$name/api"
+      scp $standalone $ssh:~/$name/api
+    elif [[ $standalone == http://*.jar ]];then
+      echo $standalone
+    fi
 
     ## run remote script
     ALLIN=allin.deploy
@@ -173,8 +114,10 @@ deployapi(){
     ALLIN_BIN="$ALLIN_BIN/ssh/$ALLIN"
     echo "=>scp $ALLIN_BIN $ssh:~/$name"
     scp $ALLIN_BIN $ssh:~/$name
-    echo "=>bash ~/$name/$ALLIN api $name $binding $data && rm ~/$name/$ALLIN"
-    ssh $ssh "bash ~/$name/$ALLIN api $name $binding $data && rm ~/$name/$ALLIN"
+    #echo "=>bash ~/$name/$ALLIN $standalone $name $binding $data && rm ~/$name/$ALLIN"
+    #ssh $ssh "bash ~/$name/$ALLIN $standalone $name $binding $data && rm ~/$name/$ALLIN"
+    echo "=>bash ~/$name/$ALLIN $standalone $name $binding $data"
+    ssh $ssh "bash ~/$name/$ALLIN $standalone $name $binding $data"
 }
 
 genurl(){
@@ -197,15 +140,61 @@ genurl(){
 
 
 ## main
-if [[ $cmd == cmddeploy*  ]];then
+if [[ $cmd == cmddeploy ]];then
+   package=$2
    ssh=$3
    name=$4
+      
    if [[ $ssh == --* ]];then
       usage
    fi
    if [[ $name == --* ]];then
       usage
    fi
+    
+   ## pre-filter
+   if [[ $package == . ]];then
+      if [ -d dist ];then
+         package=dist
+      elif [ -d target ];then 
+         package=target
+      fi
+   fi
+   
+   ## find package
+   if [[ $package == dist ]];then
+      if [ ! -d dist ];then
+         echo dist not exist !
+         exit
+      fi
+   elif [[ $package == target/*.jar ]];then
+      if [ ! -f $package ];then
+         echo $package not exist !
+         exit
+      fi
+   elif [[ $package == target ]];then
+       ## find standalone 
+       standalone=$(find target -name "*-standalone.jar")
+       if [ ! $standalone ];then
+          echo 'target does not contain any *-standalone.jar !'
+          exit
+       fi
+       package=$standalone
+   else
+      echo "invalid package: $package !"
+      exit
+   fi
+
+   ## check web or api 
+   if [[ $package == dist || $package == *.tar.gz || $package == *.tar || $package == *.zip ]];then
+      cmd=cmddeployweb
+   elif [[ $package == *.jar ]];then
+      cmd=cmddeployapi
+   else  
+      echo "invalid package: $package"
+      exit
+   fi
+
 
     it=''
     for arg in $@;do
@@ -213,12 +202,12 @@ if [[ $cmd == cmddeploy*  ]];then
            it=$arg
          elif [ "$arg"x == "--name"x ];then
            it=$arg
-         elif [ "$arg"x == "--link"x ];then
-           it=$arg
          elif [ "$arg"x == "--binding"x ];then
            it=$arg
          elif [ "$arg"x == "--endpoint"x ];then
            it=$arg
+         elif [ "$arg"x == "--token"x ];then
+           it=$arg  
          elif [ "$arg"x == "--data-url"x ];then
            it=$arg
         fi
@@ -228,12 +217,12 @@ if [[ $cmd == cmddeploy*  ]];then
             ssh=$arg
          elif [ "$it"x == "--name"x ];then
            name=$arg
-         elif [ "$it"x == "--link"x ];then
-           link=$arg
          elif [ "$it"x == "--binding"x ];then
            binding=$arg
          elif [ "$it"x == "--endpoint"x ];then
            endpoint=$arg
+         elif [ "$it"x == "--token"x ];then
+           token=$arg
          elif [ "$it"x == "--data-url"x ];then
            data=$arg
         fi
@@ -244,18 +233,13 @@ if [[ $cmd == cmddeploy*  ]];then
        exit
     fi
 
-    if [[ ! $ssh == *\@* ]];then
-       ssh="$ssh@127.0.0.1"
-    fi
-
     if [ ! $name ];then
        echo "--name [name] not being provided !"
        exit
     fi
 
-    ## no link, will find dist/target locally
-    if [ ! $link ];then
-       link='{}'
+    if [[ ! $ssh == *\@* ]];then
+       ssh="$ssh@127.0.0.1"
     fi
 
     ## for web
@@ -268,9 +252,11 @@ if [[ $cmd == cmddeploy*  ]];then
          ## check binding
          if [ ! $binding ];then
             binding='8000'
+         elif [[ $binding == 0 ]];then
+            binding='8000'
          fi
 
-        deployweb $ssh $name $binding $endpoint $link
+        deployweb $package $ssh $name $binding $endpoint $token
     fi
 
     ## for api
@@ -278,9 +264,20 @@ if [[ $cmd == cmddeploy*  ]];then
          ## check binding
          if [ ! $binding ];then
             binding='8080'
+         elif [[ $binding == 0 ]];then
+            binding='8080'
          fi
 
-        deployapi $ssh $name $binding $data $link
+         ## handle data
+         if [[ $data == jdbc:* ]];then
+            data=$data
+         elif [[ $data == [0-9.a-z]*/* ]];then
+            data_name=${data#*/}  ## remove all before /
+            data_host=${data%/*}  ## remove all after /
+            data=$(genurl $data_name $data_host '3306' 'root' 'root')
+         fi
+
+        deployapi $package $ssh $name $binding $data
     fi
 
 elif [[ $cmd == cmdgenurl ]];then
