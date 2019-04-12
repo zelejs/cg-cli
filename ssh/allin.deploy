@@ -57,6 +57,12 @@ fi
 ## check docker rnning
 ip=$(docker inspect $name --format '{{.NetworkSettings.IPAddress}}')
 if [ ! $ip ];then
+   ## check if contains stopped container 
+   psa=$(docker exec --privileged $name date)
+   if [ $psa ];then
+      docker rm $name
+   fi
+
    if [[ $cmd == api ]];then
       echo "=>docker run --name $name -d -e MYSQL_URL=$data -v ~/$name/api:/webapps -p $binding:$PORT zelejs/allin-web:slim"
       docker run --name $name -d -e MYSQL_URL=$data  -v ~/$name/api:/webapps -p $binding:$PORT zelejs/allin-web:slim
@@ -146,7 +152,7 @@ fi
 ## find envs
 gen_used_envs() {
     name=$1
-    envs=$(docker inspect $name --format '{{ .Config.env}}')
+    envs=$(docker inspect $name --format '{{ .Config.Env}}')
     envs=${envs//\[/}  ## remove [
     envs=${envs//\]/}  ## remove ]
 

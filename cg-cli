@@ -733,9 +733,10 @@ dbgenperms() {
        perms="$perms \"$it\","
    done
 
-   #perms=${perms/ /\[}  ## replace first space with [ 
-   perms=${perms#* }  ## replace first space with [ 
+   #perms=${perms/ /\[} ## replace first space with [ 
+   perms=${perms#* }    ## replace first space with [ 
    perms=${perms%,*}    ## remove the last ,
+   perms=${perms//, /,}  ## remove all space
    
    echo "[$perms]"
 }

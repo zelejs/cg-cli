@@ -3,16 +3,19 @@ cmd=$1
 
 usage() {
     echo "Usage: allin-cli deploy <package> <user@host> <name> [OPTIONS]"
-    echo "       allin-cli gen url <db> [127.0.0.1] [3306] [root] [root]"
     echo "       allin-cli docker restart <user@host> <name>"
     echo "       allin-cli docker stop <user@host> <name>"
-    echo "       allin-cli docker rm <user@host> <name>"
+    echo "       allin-cli docker rm <user@host> <name> --force"
+    echo "       allin-cli docker add volume <volume> <user@host> <name>"
+    echo "       allin-cli gen url <db> [127.0.0.1] [3306] [root] [root]"
+    echo "       allin-cli set endpoint <endpoint> <user@host> <name>"
     echo "  OPTIONS"
     echo "      --binding   binding port, DEFAUTL [8000] for web, and [8080] for api"
     echo "      --data-url  mysql db url, DEFAULT [jdbc:mysql://127.0.0.1/test?user=root&password=root&characterEncoding=utf8"]
     echo "                  short input [127.0.0.1/db]"
     echo "      --endpoint  api endpoint only for web, DEFAULT [127.0.0.1:8080] "
     echo "      --token     access token only for web, --token . means gen token auto"
+    echo "      --volume    additional volume, means docker -v "
     echo "  TIPS"
     echo "      e.g. allin-cli deploy . craftperson@127.0.0.1 docker_name --token . --data-url 127.0.0.1/db"
     exit
@@ -54,6 +57,14 @@ elif [[ $cmd2 == genurl ]];then
         usage
     fi
     cmd=cmdgenurl
+elif [[ $cmd2 == setendpoint ]];then
+    endpoint=$3
+    ssh=$4
+    name=$5
+    if [ ! $name ];then  
+        usage
+    fi
+    cmd=cmdsetendpoint
 else
     usage
 fi
@@ -101,6 +112,7 @@ deployweb(){
 
     ## run docker if no docker $name
     ## run remote script
+    echo --
     ALLIN=allin.deploy
     ALLIN_BIN=$(readlink -f $0)
     ALLIN_BIN=$(dirname $ALLIN_BIN)
@@ -173,7 +185,13 @@ dockerstop() {
 dockerrm() {
    ssh=$1
    name=$2
-   ssh $ssh "docker rm $name"
+   force=$3
+
+   if [[ $force == --force ]];then
+      ssh $ssh "docker stop $name && docker rm $name"
+   else
+      ssh $ssh "docker rm $name"
+   fi
 }
 
 genurl(){
@@ -192,6 +210,14 @@ genurl(){
 
    url="jdbc:mysql://$host$port/$db?user=$user\&password=$password\&autoReconnect=true\&characterEncoding=utf8\&allowMultiQueries=true"
    echo $url
+}
+
+setendpoint(){
+   endpoint=$1
+   ssh=$2
+   name=$3
+
+   ssh $ssh "cd ~/$name/web/dist && sed -i \"s/HOST=.*/HOST=\'$endpoint\'/\" config.js && grep HOST config.js"
 }
 
 
@@ -313,7 +339,7 @@ if [[ $cmd == cmddeploy ]];then
          if [ ! $endpoint ];then 
             endpoint='http://127.0.0.1:8080'
          fi
-         if [ $endpoint == http://* ];then 
+         if [[ $endpoint == http://* ]];then 
             endpoint=$endpoint
          else
             endpoint="http://$endpoint"
@@ -371,10 +397,11 @@ elif [[ $cmd == cmddockerstop ]];then
 elif [[ $cmd == cmddockerrm ]];then
    ssh=$3
    name=$4
+   force=$5
    if [[ ! $ssh == *\@* ]];then
       ssh="$ssh@127.0.0.1"
    fi
-   dockerrm $ssh $name
+   dockerrm $ssh $name $force
 elif [[ $cmd == cmdgenurl ]];then
    db=$3
    host=$4
@@ -396,6 +423,21 @@ elif [[ $cmd == cmdgenurl ]];then
    fi
 
    genurl $db $host $port $user $password
+
+elif [[ $cmd == cmdsetendpoint ]];then
+   endpoint=$3
+   ssh=$4
+   name=$5
+   if [[ ! $endpoint == http://* ]];then 
+      endpoint="http://$endpoint"
+   fi
+
+   if [[ ! $endpoint == *:* ]];then 
+      echo Invalid endpoint: $endpoint, no port !
+      exit
+   fi
+
+   setendpoint $endpoint $ssh $name
 
 else 
     echo "Unknown cmd: $cmd"
