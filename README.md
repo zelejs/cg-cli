@@ -1,7 +1,7 @@
 # 自动生成 CRUD 代码工具
 
 ## Install
-$ npm i -g 
+`$ npm i -g`
 
 ## Usage
     cg-cli [OPTIONS] --help --gen
