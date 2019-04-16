@@ -67,8 +67,13 @@ if [ ! $ip ];then
    fi
 
    if [[ $cmd == api ]];then
-      echo "=>docker run --name $name -d -e MYSQL_URL=$data -v ~/$name/api:/webapps -p $binding:$PORT zelejs/allin-web:slim"
-      docker run --name $name -d -e MYSQL_URL=$data  -v ~/$name/api:/webapps -p $binding:$PORT zelejs/allin-web:slim
+      if [ $volume ];then 
+          VOLUME="-v $volume"
+      else
+          VOLUME=''
+      fi
+      echo "=>docker run --name $name -d -e MYSQL_URL=$data -v ~/$name/api:/webapps $VOLUME -p $binding:$PORT zelejs/allin-web:slim"
+      docker run --name $name -d -e MYSQL_URL=$data  -v ~/$name/api:/webapps $VOLUME -p $binding:$PORT zelejs/allin-web:slim
    elif [[ $cmd == web ]];then
       echo "=>docker run --name $name -v ~/$name/web/dist:/var/www/html -p $binding:$PORT -d zelejs/allin-web:slim"
       docker run --name $name -v ~/$name/web/dist:/var/www/html -p $binding:$PORT -d zelejs/allin-web:slim
