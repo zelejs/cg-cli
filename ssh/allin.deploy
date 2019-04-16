@@ -13,6 +13,9 @@ if [[ $cmd == api ]];then
 elif [[ $cmd == web ]];then
    PORT='80'
 fi
+volume=$5
+### end args ###
+
 
 ## get package from url
 if [[ $package == https://* ]];then
@@ -146,6 +149,12 @@ elif  [[ $cmd == web ]];then
       used_binds="$used_binds -v ~/$name/web/dist:/var/www/html"
    fi
 fi
+
+## additional volumes
+if [ $volume ];then
+    used_binds="$used_binds -v $volume"
+fi
+
 ## end volume binds #########################
 
 ######################################

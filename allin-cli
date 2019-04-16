@@ -140,6 +140,7 @@ deployapi(){
    name=$3
    binding=$4
    data=$5
+   volume=$6
 
    ## & from \&
 
@@ -177,8 +178,8 @@ deployapi(){
     scp $ALLIN_BIN $ssh:~/$name
     #echo "=>bash ~/$name/$ALLIN $standalone $name $binding $data && rm ~/$name/$ALLIN"
     #ssh $ssh "bash ~/$name/$ALLIN $standalone $name $binding $data && rm ~/$name/$ALLIN"
-    echo "=>bash ~/$name/$ALLIN $standalone $name $binding $data"
-    ssh $ssh "bash ~/$name/$ALLIN $standalone $name $binding $data"
+    echo "=>bash ~/$name/$ALLIN $standalone $name $binding $data $volume"
+    ssh $ssh "bash ~/$name/$ALLIN $standalone $name $binding $data $volume"
 }
 
 dockerrestart() {
@@ -354,6 +355,8 @@ if [[ $cmd == cmddeploy ]];then
            it=$arg  
          elif [ "$arg"x == "--data-url"x ];then
            it=$arg
+         elif [ "$arg"x == "--volume"x ];then
+            it=$arg
          elif [ "$arg"x == "--ssr"x ];then
            it=$arg
            ssr='--SSR'
@@ -372,6 +375,8 @@ if [[ $cmd == cmddeploy ]];then
            token=$arg
          elif [ "$it"x == "--data-url"x ];then
            data=$arg
+         elif [ "$it"x == "--volume"x ];then
+           volume=$arg
         fi
     done
 
@@ -447,7 +452,7 @@ if [[ $cmd == cmddeploy ]];then
             binding='8080'
          fi
          
-        deployapi $package $ssh $name $binding $data
+        deployapi $package $ssh $name $binding $data $volume
     fi
 elif [[ $cmd == cmddockerrestart ]];then
    ssh=$3
