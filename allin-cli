@@ -17,6 +17,7 @@ usage() {
     echo "      --endpoint  api endpoint only for web, DEFAULT [127.0.0.1:8080] "
     echo "      --token     access token only for web, --token . means gen token auto"
     echo "      --volume    additional volume, means docker -v "
+    echo "      --ssr       deploy web as SSR server without option"
     echo "  TIPS"
     echo "      e.g. allin-cli deploy . craftperson@127.0.0.1 docker_name --token . --data-url 127.0.0.1/db"
     exit
@@ -88,12 +89,13 @@ deployweb(){
     ssh=$2
     name=$3
     binding=$4
-    endpoint=$5
-    token=$6
-    perms=$7
+    ssr=$5
+    endpoint=$6
+    token=$7
+    perms=$8
 
     ## make sure args ok
-    echo $package, $ssh, $name, $binding, $endpoint
+    echo $package, $ssh, $name, $binding, SSR=$ssr, $endpoint
 
     ## ready for the path
     echo "=>ssh $ssh \"mkdir -p ~/$name/web\""
@@ -128,8 +130,8 @@ deployweb(){
     ALLIN_BIN="$ALLIN_BIN/ssh/$ALLIN"
     echo "=>scp $ALLIN_BIN $ssh:~/$name"
     scp $ALLIN_BIN $ssh:~/$name
-    echo "=>bash ~/$name/$ALLIN $package $name $binding && rm ~/$name/$ALLIN"
-    ssh $ssh "bash ~/$name/$ALLIN $package $name $binding && rm ~/$name/$ALLIN"
+    echo "=>bash ~/$name/$ALLIN $package $name $binding $ssr && rm ~/$name/$ALLIN"
+    ssh $ssh "bash ~/$name/$ALLIN $package $name $binding $ssr && rm ~/$name/$ALLIN"
 }
 
 deployapi(){
@@ -352,6 +354,9 @@ if [[ $cmd == cmddeploy ]];then
            it=$arg  
          elif [ "$arg"x == "--data-url"x ];then
            it=$arg
+         elif [ "$arg"x == "--ssr"x ];then
+           it=$arg
+           ssr='--SSR'
         fi
 
          ## get the arg
@@ -412,6 +417,10 @@ if [[ $cmd == cmddeploy ]];then
             binding='8000'
          fi
 
+         if [ ! $ssr ];then 
+            ssr='--'
+         fi
+
          ## get token 
          if [[ $token == . ]];then
             if [ ! $data ];then 
@@ -426,7 +435,7 @@ if [[ $cmd == cmddeploy ]];then
          fi
 
          ## deploy web 
-         deployweb $package $ssh $name $binding $endpoint $token $perms
+         deployweb $package $ssh $name $binding $ssr $endpoint $token $perms
     fi
 
     ## for api
