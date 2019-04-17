@@ -19,8 +19,8 @@ usage() {
   echo "    cg-cli crud manymany <master> <peer> <relation>"
   echo "    cg-cli crud group    <group> [...]"
   echo "    cg-cli crud groupby  <group> <groupBy> <groupId>"
+  echo "    cg-cli crud xml      [/path/to/cruds.xml]"
   echo "    cg-cli crud init table <table-name> [...]"
-  echo "    cg-cli crud -f       </path/to/cruds.xml>"
   echo "    cg-cli test crud one"
   echo "    cg-cli test crud onemany"
   echo "    cg-cli test crud onemany x2"
@@ -31,13 +31,14 @@ usage() {
   echo "    cg-cli yaml get url"
   echo "    cg-cli yaml run sql [test]"
   echo "    cg-cli yaml show create tables"
+  echo "    cg-cli coding sql <.sql> <module>"
 }
 usage_db() {
   echo "Usage:"
   echo "    cg-cli [OPTIONS] --help --gen"
   echo "    cg-cli db get url"
   echo "    cg-cli db set url <database> [localhost] [3306] [root] [root]"
-  echo "    cg-cli db sanity"
+  echo "    cg-cli db sanity [url]"
   echo "    cg-cli db run sql [/path/to/schema.sql]"
   echo "    cg-cli db show tables"
   echo "    cg-cli db show create table <table-name>"
@@ -52,8 +53,8 @@ usage_crud() {
   echo "    cg-cli crud onemany  <master> <slave:mid:id> [slave:mid1,mid2] [slave::relation:mid:id] [...]"
   echo "    cg-cli crud manymany <master> <peer> <relation>"
   echo "    cg-cli crud group    <group> [groupBy] [groupId]"
+  echo "    cg-cli crud xml      [/path/to/cruds.xml]"
   echo "    cg-cli crud init tables <table-name> [...]"
-  echo "    cg-cli crud -f       </path/to/cruds.xml>"
 }
 usage_test() {
   echo "Usage:"
@@ -122,19 +123,23 @@ elif [ "$cmd"x == "db"x  ];then
       ## $5  host
       ## $6  port
       ## $7  user
+      user=$7
       ## $8  passw
+      passw=$8
       if [ ! $4 ];then
-         usage_db
+         echo "    cg-cli db set url <database> [localhost] [3306] [root] [root]"
          exit
       fi
 
-      if [ $7 ];then
-         if [ ! $8 ];then
-            echo "    cg-cli db set config $4 $5 $6 $7 [passw]"
+      if [ $user ];then
+         # cannot only user withou password
+         if [ ! $passw ];then
+            echo "    cg-cli db set url $4 $5 $6 $user [passw]"
             exit
          fi
       fi
       cmd=dbseturl
+
    elif [ "$subcmd"x == "runsql"x ];then
       cmd=dbrunsql
 
@@ -262,23 +267,19 @@ elif [ "$cmd"x == "crud"x ];then
 
       cmd=crudgroupby
 
-   elif [ "$subcmd"x == "-f"x ];then
+   elif [ "$subcmd"x == "xml"x ];then
       cruds=$3
 
-
       if [ ! $cruds ];then
-         echo "    cg-cli crud -f       </path/to/cruds.xml>"
+         cruds='cruds.xml'
+      fi
+
+      if [ ! -f $cruds ];then
+         echo "$cruds not exists!"
          exit
       fi
 
-      if [ ! -e $cruds ];then
-         echo "    cg-cli crud -f       </path/to/cruds.xml>"
-         echo ""
-         echo "    Fatal: file $cruds not exists!"
-         exit
-      fi
-
-      cmd=crud_f
+      cmd=cmdcrudxml
 
    elif [ "$subcmd"x == "init"x ];then
       if [[ ! $3 == table ]];then
@@ -424,11 +425,51 @@ elif [ "$cmd"x == "yaml"x ];then
        echo "    cg-cli yaml show create tables"
        exit
    fi
+elif [ "$cmd"x == "coding"x ];then
+    subcmd=$2
 
+    if [ "$subcmd"x == "sql"x ];then
+         sql=$3
+         module=$4
+         ##
+         CRUDS='cruds.xml'
+
+         if [ ! $sql ];then 
+            echo "    cg-cli coding sql <.sql> <module>"
+            exit
+         fi
+
+         ## check module
+         if [ ! $module ];then 
+             echo "    cg-cli coding sql <.sql> <module>"
+             exit
+         fi
+
+         ## check sql 
+         if [ ! -f $sql ];then 
+            echo "$sql not exists"
+            exit
+         fi
+         ## check cruds.xml
+         if [ ! -f $CRUDS ];then 
+            echo "$CRUDS not exists"
+            exit
+         fi
+
+         cmd=cmdcodingsql
+    else  
+       echo "    cg-cli coding sql <.sql> <module>"
+       exit
+    fi
 else
     usage
     exit
 fi
+
+
+##########################
+## main                 ##
+##########################
 
 
 ### start ###
@@ -448,13 +489,15 @@ if [ ! -e $pom ];then
 fi
 
 ## get connection string
-url=$(grep "<url>" $pom)
-url=${url%</url>}
-url=${url#*<url>}
-url=${url//amp;/}
+URL=$(grep "<url>" $pom)
+URL=${URL%</url>}
+URL=${URL#*<url>}
+URL=${URL//amp;/}
 #echo $url
 
 match_database(){
+   url=$1
+
    #cut after ?
    db=$url
    db=${db##*/}
@@ -535,9 +578,9 @@ dbseturl() {
 
     #sed -i "s/<url>jdbc:mysql:\/\/[[:digit:]]\+.[[:digit:]]\+.[[:digit:]]\+.[[:digit:]]\+\/\w\+/<url>jdbc:mysql:\/\/$mysql_host$mysql_port\/$mysql_db/;s/user=\w\+/user=$mysql_user/;s/password=\w\+/password=$mysql_pw/" $pom
     if [ "$uname"x == "Darwin"x ];then
-        sed -i "" "s/<url>jdbc:mysql:\/\/[a-zA-Z0-9.:]*\/[a-zA-Z]*/<url>jdbc:mysql:\/\/$mysql_host$mysql_port\/$mysql_db/;s/user=[a-zA-Z]*/user=$mysql_user/;s/password=[a-zA-Z]*/password=$mysql_pw/" $pom
+        sed -i "" "s/<url>jdbc:mysql:\/\/[a-zA-Z0-9.:]*\/[a-zA-Z_]*/<url>jdbc:mysql:\/\/$mysql_host$mysql_port\/$mysql_db/;s/user=[a-zA-Z]*/user=$mysql_user/;s/password=[a-zA-Z]*/password=$mysql_pw/" $pom
     else
-        sed -i "s/<url>jdbc:mysql:\/\/[a-zA-Z0-9.:]\+\/\w\+/<url>jdbc:mysql:\/\/$mysql_host$mysql_port\/$mysql_db/;s/user=\w\+/user=$mysql_user/;s/password=\w\+/password=$mysql_pw/" $pom
+        sed -i "s/<url>jdbc:mysql:\/\/[a-zA-Z0-9.:]\+\/[\w_]\+/<url>jdbc:mysql:\/\/$mysql_host$mysql_port\/$mysql_db/;s/user=\w\+/user=$mysql_user/;s/password=\w\+/password=$mysql_pw/" $pom
     fi
 
     #sanity
@@ -547,6 +590,7 @@ dbseturl() {
 
 ## sanity test for mysql
 dbsanity() {
+   url=$1
    mysql_test=$($dir/mysql-test/bin/mysql-test $url "select now()")
    if [ "$mysql_test" ];then
       echo "Connection to $url succeeded!"
@@ -649,7 +693,9 @@ subyamlshowcreatetables(){
 }
 
 dbshowtables() {
-    db=$(match_database)
+    url=$1
+
+    db=$(match_database $url)
     sql="select TABLE_NAME from INFORMATION_SCHEMA.TABLES where TABLE_SCHEMA='$db' and TABLE_NAME <> 'schema_version'"
     for t in $($dir/mysql-test/bin/mysql-test "$url" "$sql");do
         echo $t
@@ -741,6 +787,42 @@ dbgenperms() {
    echo "[$perms]"
 }
 
+crudxml() {
+    $CONFCLI table reset --save
+
+      ## ** CODE-GENERATOR DO NOT SUPPORT MULTI EXECUTION **
+
+      ## BEGIN 
+      ## config crud
+      #$CONFCLI crud reset --save
+      #$CONFCLI crud add -f $cruds --save
+      ## config end
+   
+      ##$CONFCLI list -t -c
+      ## gen crud
+      ##gen
+      ## END
+
+
+      ## ** EXECUTE FOR EACH CRUD **
+
+      result=$(cat $cruds)
+      result=${result//[[:space:]]/}  ## remove space
+      result=${result//\<cruds\>/}  ## remove <cruds>
+      result=${result//\<\/cruds\>/}  ## remove </cruds>
+      result=${result//\<\/crud\>/\<\/crud\> }  ## replace </crud> with </crud>[[:space:]]
+
+      for crud in $result;do
+         ## config crud
+         $CONFCLI crud reset --save
+         $CONFCLI crud add -l $crud --save
+            
+         $CONFCLI list -t -c
+         ## gen crud
+         gen
+
+      done
+}
 
 crudinitializetable() {
    if [ "$gen"x == "--gen"x ];then
@@ -782,6 +864,36 @@ yamlgeturl(){
     ## get active url from application.yml
     url=$($YAMLCLI get active url);
     echo $url;
+}
+
+codingsql() {
+    sql=$1
+    module=$2
+    ## 
+    cruds='cruds.xml'
+
+    result='debug'
+    ## check db sanity 
+    if [[ ! $result == debug ]];then 
+      result=$(dbsanity $URL)
+      if [[ ! $result == *succeeded! ]];then
+         echo "[$url] is not sanity !"
+         echo "    cg-cli db set url <database> [localhost] [3306] [root] [root]"
+         exit
+      fi
+    fi
+
+    ## check sql, move to src/main/resources/sql
+    if [ ! -d  src/main/resources/sql ];then 
+       mkdir -p src/main/resources/sql
+    fi
+    schemasql=$(basename $sql)
+    if [ ! -f  src/main/resources/sql/$schemasql ];then 
+       cp $sql src/main/resources/sql
+    fi 
+
+    ## verify cruds.xml
+    crudxml $cruds
 }
 
 gen() {
@@ -832,6 +944,9 @@ elif [ "$cmd"x == "dbseturl"x ];then
 
 elif [ "$cmd"x == "dbsanity"x ];then
    url=$3
+   if [ ! $url ];then 
+      url=$URL
+   fi
    dbsanity $url
 
 elif [ "$cmd"x == "dbrunsql"x ];then
@@ -843,7 +958,7 @@ elif [ "$cmd"x == "dbrunsql"x ];then
     dbrunsql "$schema" $param1 $param2 $param3
 
 elif [ "$cmd"x == "dbshowtables"x ];then
-   dbshowtables
+   dbshowtables $URL
 
 elif [ "$cmd"x == "dbshowcreatetable"x ];then
    tab=$5
@@ -1109,45 +1224,13 @@ elif [ "$cmd"x == "crudgroup"x -o "$cmd"x == "crudgroupby"x -o "$cmd"x == "testc
       gen
    fi
 
-elif [ "$cmd"x == "crud_f"x ];then
-
+elif [ "$cmd"x == "cmdcrudxml"x ];then
       cruds=$3
+      if [ ! $cruds ];then
+         cruds='cruds.xml'
+      fi
 
-      $CONFCLI table reset --save
-
-      ## ** CODE-GENERATOR DO NOT SUPPORT MULTI EXECUTION **
-
-      ## BEGIN 
-      ## config crud
-      #$CONFCLI crud reset --save
-      #$CONFCLI crud add -f $cruds --save
-      ## config end
-   
-      ##$CONFCLI list -t -c
-      ## gen crud
-      ##gen
-      ## END
-
-
-      ## ** EXECUTE FOR EACH CRUD **
-
-      result=$(cat $cruds)
-      result=${result//[[:space:]]/}  ## remove space
-      result=${result//\<cruds\>/}  ## remove <cruds>
-      result=${result//\<\/cruds\>/}  ## remove </cruds>
-      result=${result//\<\/crud\>/\<\/crud\> }  ## replace </crud> with </crud>[[:space:]]
-
-      for crud in $result;do
-         ## config crud
-         $CONFCLI crud reset --save
-         $CONFCLI crud add -l $crud --save
-            
-         $CONFCLI list -t -c
-         ## gen crud
-         gen
-
-      done
-
+      crudxml $cruds
 
 elif [ "$cmd"x == "crudinitializetable"x ];then
 
@@ -1207,6 +1290,11 @@ elif [ "$cmd"x == "yamlshowcreatetables"x ];then
 
     yamlshowcreatetables $url
 
+elif [ "$cmd"x == "cmdcodingsql"x ];then
+    sql=$3
+    module=$4
+
+    codingsql $sql $module
 else
     usage
     exit
