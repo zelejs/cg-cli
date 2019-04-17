@@ -5,6 +5,7 @@ usage() {
     echo "Usage: jenkins clean m2"
     echo "       jenkins show link [link]"
     echo "       jenkins upload jar <link>"
+    echo "       jenkins upload dist <link> <pack>"
     echo "       jenkins show lib <link>"
     echo "       jenkins pull lib <link> <lib>"
     echo "       jenkins export classes <lib> [pattern] [-o]"
@@ -32,7 +33,7 @@ elif [[ $cmd2 == cleanm2 ]];then
 
 elif [[ $cmd2 == uploadjar ]];then
     if [ ! -e pom.xml ];then
-        echo "pom.xml not exists"
+        echo 'pom.xml not exists'
         exit
     fi
 
@@ -42,6 +43,23 @@ elif [[ $cmd2 == uploadjar ]];then
     fi
   
     cmd=cmduploadjar
+
+elif [[ $cmd2 == uploaddist ]];then
+    
+    if [ ! -d dist ];then
+       echo 'dist not exists'
+       exit
+    fi
+
+    ## 
+    link=$3
+    pack=$4
+
+    if [ ! $pack ];then
+       usage
+    fi
+  
+    cmd=cmduploaddist
 
 elif [[ $cmd2 == pulllib ]];then
     link=$3
@@ -262,6 +280,38 @@ uploadjar(){
     jarroot='BOOT-INF';
     echo $jarok
     ssh -i $PEM ci@zele.pro "cd /home/ci/link/$link && $JAR 0uf $standalone $jarok && rm -rf $jarroot && ls -l"
+    echo 'Done.'
+}
+
+
+uploaddist(){
+    ## upload to link
+    link=$1
+    pack=$2
+
+    ## check index.html location
+    if [ -f dist/static/index.html ];then 
+       mv dist/static/index.html dist/index.html
+    fi
+
+    PACK=''
+    if [[ $pack == *.zip ]];then 
+       PACK="zip $pack -r dist"
+    elif [[ $pack == *.tar ]];then
+       PACK="tar cvf $pack dist"
+    elif [[ $pack == *.tar.gz ]];then
+       PACK="tar zcvf $pack dist"
+    fi
+
+    ## remove dist
+    echo "=>ssh -i $PEM ci@zele.pro \"cd /home/ci/link/$link && rm -rf dist\""
+    ssh -i $PEM ci@zele.pro "cd /home/ci/link/$link && rm -rf dist"
+    ## scp dist
+    echo "=>scp -r dist ci@zele.pro:/home/ci/link/$link"
+    scp -i $PEM -r dist ci@zele.pro:/home/ci/link/$link
+    ## zip dist
+    echo "=>cd /home/ci/link/$link && rm -rf dist && $PACK && ls -l"
+    ssh -i $PEM ci@zele.pro "cd /home/ci/link/$link && $PACK && ls -l"
     echo 'Done.'
 }
 
@@ -867,6 +917,10 @@ elif [[ $cmd == cmdshowlink ]];then
 elif [[ $cmd == cmduploadjar ]];then
     link=$3
     uploadjar $link
+elif [[ $cmd == cmduploaddist ]];then
+    link=$3
+    pack=$4
+    uploaddist $link $pack
 elif [[ $cmd == cmdpulllib ]];then
     link=$3
     lib=$4
