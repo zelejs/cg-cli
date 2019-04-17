@@ -191,31 +191,35 @@ uploadjar(){
     ## no jar found, search local
     if [ ! -f target/$jar ];then 
         libs=$(find target -name "*.jar")
+        
         ## get how many libs
-    fi
-    i=0
-    for lib in $libs;do
-        i=$(($i+1))
-    done
-    ## if no match
-    if [ $i -eq 0 ];then
-        echo no libs found !
-        exit
-    fi
-    ## if more than 1
-    if [ $i -gt 1 ];then
-        for it in $libs;do
-            if [[ $it == *-standalone.jar ]];then
-                continue
-            fi
-            jar=$it
+        i=0
+        for lib in $libs;do
+            i=$(($i+1))
+            echo $lib
         done
-    else
-       ## equal 1
-       jar=$(basename $libs)
-    fi
 
+        ## if no match
+        if [ $i -eq 0 ];then
+            echo no libs found !
+            exit
+        fi
 
+        ## if more than 1
+        if [ $i -gt 1 ];then
+            for it in $libs;do
+                if [[ $it == *-standalone.jar ]];then
+                    continue
+                fi
+                jar=$it
+            done
+        else
+            ## equal 1
+            jar=$(basename $libs)
+        fi
+    fi ## end if [ ! -f target/$jar ];then 
+
+    ## verify jar again
     if [ ! -e target/$jar ];then
         echo target/$jar not exists
         exit
