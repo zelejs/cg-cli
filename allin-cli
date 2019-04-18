@@ -166,7 +166,9 @@ deployapi(){
     ## cp dist to ssh
     if [[ $standalone == target/*-standalone.jar ]];then
       echo "=>scp $standalone $ssh:~/$name/api"
+######################################################      
       scp $standalone $ssh:~/$name/api
+#######################################################      
     elif [[ $standalone == http://*.jar ]];then
       echo $standalone
     fi
@@ -353,7 +355,6 @@ if [[ $cmd == cmddeploy ]];then
       exit
    fi
 
-
     it=''
     for arg in $@;do
          if [ "$arg"x == "--ssh"x ];then
@@ -407,9 +408,10 @@ if [[ $cmd == cmddeploy ]];then
        ssh="$ssh@127.0.0.1"
     fi
 
+    ## if no token set, use ok
     if [ ! $data ];then 
-      data='ok.zele.pro/test'      
-   fi
+       data='ok.zele.pro/test'      
+    fi
 
     ## handle data
     if [[ $data == jdbc:* ]];then
@@ -444,7 +446,7 @@ if [[ $cmd == cmddeploy ]];then
          fi
 
          if [[ ! $token ]];then 
-             token='.'
+            token='.'
          fi 
 
          ## get token 
@@ -473,9 +475,10 @@ if [[ $cmd == cmddeploy ]];then
          elif [[ $binding == 0 ]];then
             binding='8080'
          fi
-         
+
         deployapi $package $ssh $name $binding $data $volume
     fi
+
 elif [[ $cmd == cmddockerrestart ]];then
    ssh=$3
    name=$4

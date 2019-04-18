@@ -6,6 +6,7 @@ if [[ $package == *.jar ]];then
 else
     cmd=web
 fi
+
 ## less effect 
 if [[ $cmd == api ]];then
    PORT='8080'
@@ -51,9 +52,11 @@ if [[ $package == https://* ]];then
 fi
 
 ## check dist exists
-if [ ! -d ~/$name/web/dist ];then
-   echo "~/$name/web/dist not exists"
-   exit
+if [[ $cmd == web ]];then
+   if [ ! -d ~/$name/web/dist ];then
+      echo "~/$name/web/dist not exists"
+      exit
+   fi
 fi
 
 ## check docker rnning
