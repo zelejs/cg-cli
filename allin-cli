@@ -118,6 +118,7 @@ deployweb(){
       tar zcvf dist.tar.gz dist
       echo "=>scp dist.tar.gz $ssh:~/$name/web"
       scp dist.tar.gz $ssh:~/$name/web
+      rm dist.tar.gz
       echo "=>ssh $ssh \"cd ~/$name/web && if [ -f dist/config.js ];then cp dist/config.js .;fi && tar zxvf dist.tar.gz && rm dist.tar.gz && if [ ! -f dist/config.js ];then mv config.js dist/config.js;fi\""
       ssh $ssh "cd ~/$name/web && if [ -f dist/config.js ];then cp dist/config.js .;fi && tar zxvf dist.tar.gz && rm dist.tar.gz && if [ ! -f dist/config.js ];then mv config.js dist/config.js;fi"
       echo "=>ssh $ssh \"cd ~/$name/web && if [ -f dist/config.js ];then cp dist/config.js .;fi && tar zxvf dist.tar.gz && rm dist.tar.gz && if [ ! -f dist/config.js ];then mv config.js dist/config.js;fi\""
@@ -442,8 +443,13 @@ if [[ $cmd == cmddeploy ]];then
             ssr='--'
          fi
 
+         if [[ ! $token ]];then 
+             token='.'
+         fi 
+
          ## get token 
          if [[ $token == . ]];then
+            ## use default ok.zele.pro/test
             if [ ! $data ];then 
                echo --data-url is not set
                exit
