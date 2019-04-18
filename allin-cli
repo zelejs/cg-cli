@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 cmd=$1
 
+ALLIN=allin.deploy
+
 usage() {
     echo "Usage: allin-cli deploy <package> <user@host> <name> [OPTIONS]"
     echo "       allin-cli docker restart <user@host> <name>"
@@ -74,7 +76,7 @@ elif [[ $cmd2 == searchlink ]];then
         exit
    fi
     
-    cmd=cmdsearchlink
+   cmd=cmdsearchlink
 else
     usage
 fi
@@ -124,7 +126,6 @@ deployweb(){
     ## run docker if no docker $name
     ## run remote script
     echo --
-    ALLIN=allin.deploy
     ALLIN_BIN=$(readlink -f $0)
     ALLIN_BIN=$(dirname $ALLIN_BIN)
     ALLIN_BIN="$ALLIN_BIN/ssh/$ALLIN"
@@ -170,7 +171,6 @@ deployapi(){
     fi
 
     ## run remote script
-    ALLIN=allin.deploy
     ALLIN_BIN=$(readlink -f $0)
     ALLIN_BIN=$(dirname $ALLIN_BIN)
     ALLIN_BIN="$ALLIN_BIN/ssh/$ALLIN"
@@ -325,6 +325,18 @@ if [[ $cmd == cmddeploy ]];then
           exit
        fi
        package=$standalone
+   elif [ -f $package ];then
+      if [ ! -d dist ];then 
+         ## local file
+         if [[ $package == *.zip ]];then 
+            unzip $package
+         elif [[ $package == *.tar ]];then 
+            tar xvf $package
+         elif [[ $package == *.tar.gz ]];then 
+            tar zxvf $package
+         fi
+      fi
+      package='dist'
    else
       echo "invalid package: $package !"
       exit
@@ -393,6 +405,10 @@ if [[ $cmd == cmddeploy ]];then
     if [[ ! $ssh == *\@* ]];then
        ssh="$ssh@127.0.0.1"
     fi
+
+    if [ ! $data ];then 
+      data='ok.zele.pro/test'      
+   fi
 
     ## handle data
     if [[ $data == jdbc:* ]];then
