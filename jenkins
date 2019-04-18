@@ -4,6 +4,7 @@ cmd=$1
 usage() {
     echo "Usage: jenkins clean m2"
     echo "       jenkins show link [link]"
+    echo "       jenkins wget link <link>"
     echo "       jenkins upload jar <link>"
     echo "       jenkins upload dist <link> <pack>"
     echo "       jenkins show lib <link>"
@@ -27,6 +28,9 @@ cmd3=$1$2$3
 
 if [[ $cmd2 == showlink ]];then
     cmd=cmdshowlink
+
+elif [[ $cmd2 == wgetlink ]];then
+    cmd=cmdwgetlink
 
 elif [[ $cmd2 == cleanm2 ]];then
     cmd=cmdcleanm2
@@ -157,8 +161,38 @@ JAR='/mnt/tools/java/bin/jar'
 
 showlink(){
     link=$1
-    echo "ssh -i $PEM ci@zele.pro \"ls /home/ci/link/$link\""
-    ssh -i $PEM ci@zele.pro "ls /home/ci/link/$link"
+    #echo "=>ssh -i $PEM ci@zele.pro \"ls /home/ci/link/$link\""
+    ssh -i $PEM ci@zele.pro "if [ -d /home/ci/link/$link ];then ls /home/ci/link/$link;else ls /home/ci/link | grep $link;fi"
+}
+
+wgetlink(){
+    link=$1
+    result=$(ssh -i $PEM ci@zele.pro "if [ -d /home/ci/link/$link ];then cd /home/ci/link/$link;ls *.zip;fi")
+    if [ ! $result ];then 
+       result=$(ssh -i $PEM ci@zele.pro "if [ -d /home/ci/link/$link ];then cd /home/ci/link/$link;ls *.jar;fi")
+    fi
+    if [ ! $result ];then 
+       result=$(ssh -i $PEM ci@zele.pro "if [ -d /home/ci/link/$link ];then cd /home/ci/link/$link;ls *.tar*;fi")
+    fi
+    ## get how many libs
+    i=0
+    for it in $result;do
+        i=$(($i+1))
+    done
+    ## if no match
+    if [ $i -eq 0 ];then
+        echo no link package found !
+        exit
+    elif [ $i -gt 1 ];then
+       for it in $result;do
+           echo $it
+       done
+       exit
+    fi
+        
+    ## only wget 
+    echo "=>curl -O http://120.79.49.72:8000/link/$link/$result"
+    curl -O http://120.79.49.72:8000/link/$link/$result
 }
 
 ## deploy to clean m2
@@ -914,6 +948,12 @@ if [[ $cmd == cmdcleanm2 ]];then
 elif [[ $cmd == cmdshowlink ]];then
     link=$3
     showlink $link
+elif [[ $cmd == cmdwgetlink ]];then
+    link=$3
+    if [ ! $link ];then 
+       usage
+    fi
+    wgetlink $link
 elif [[ $cmd == cmduploadjar ]];then
     link=$3
     uploadjar $link
