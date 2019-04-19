@@ -8,6 +8,7 @@ usage() {
     echo "       allin-cli docker restart <user@host> <name>"
     echo "       allin-cli docker stop <user@host> <name>"
     echo "       allin-cli docker rm <user@host> <name> --force"
+    echo "       allin-cli docker ps <user@host>"
     echo "       allin-cli docker add volume <volume> <user@host> <name>"
     echo "       allin-cli gen url <db> [127.0.0.1] [3306] [root] [root]"
     echo "       allin-cli set endpoint <endpoint> <user@host> <name>"
@@ -50,11 +51,17 @@ elif [[ $cmd2 == dockerstop ]];then
     fi
     cmd=cmddockerstop
 elif [[ $cmd2 == dockerrm ]];then   
-    name=$3
+    name=$4
     if [ ! $name ];then  
         usage
     fi
     cmd=cmddockerrm  
+elif [[ $cmd2 == dockerps ]];then   
+    ssh=$3
+    if [ ! $ssh ];then  
+        usage
+    fi
+    cmd=cmddockerps  
 elif [[ $cmd2 == genurl ]];then   
     db=$3
     if [ ! $db ];then  
@@ -207,6 +214,11 @@ dockerrm() {
    else
       ssh $ssh "docker rm $name"
    fi
+}
+
+dockerps(){
+   ssh=$1
+   ssh $ssh "docker ps"
 }
 
 genurl(){
@@ -410,7 +422,7 @@ if [[ $cmd == cmddeploy ]];then
 
     ## if no token set, use ok
     if [ ! $data ];then 
-       data='ok.zele.pro/test'      
+       data='ok.zele.pro/test'
     fi
 
     ## handle data
@@ -501,6 +513,12 @@ elif [[ $cmd == cmddockerrm ]];then
       ssh="$ssh@127.0.0.1"
    fi
    dockerrm $ssh $name $force
+elif [[ $cmd == cmddockerps ]];then
+   ssh=$3
+   if [[ ! $ssh == *\@* ]];then
+      ssh="$ssh@127.0.0.1"
+   fi
+   dockerps $ssh
 elif [[ $cmd == cmdgenurl ]];then
    db=$3
    host=$4
