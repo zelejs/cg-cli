@@ -1,30 +1,33 @@
 #!/usr/bin/env bash
 cmd=$1
 
+## definitions
 ALLIN=allin.deploy
+###
 
 usage() {
-    echo "Usage: allin-cli deploy <package> <user@host> <name> [OPTIONS]"
-    echo "       allin-cli docker restart <user@host> <name>"
-    echo "       allin-cli docker stop <user@host> <name>"
-    echo "       allin-cli docker rm <user@host> <name> --force"
-    echo "       allin-cli docker ps <user@host>"
-    echo "       allin-cli docker add volume <volume> <user@host> <name>"
-    echo "       allin-cli gen url <db> [127.0.0.1] [3306] [root] [root]"
-    echo "       allin-cli set endpoint <endpoint> <user@host> <name>"
-    echo "       allin-cli search link <criteria>"
+    echo "Usage: allin deploy <package> <user@host> <name> [OPTIONS]"
+    echo "       allin set endpoint <endpoint> <user@host> <name>"
+    echo "       allin get url <db> [127.0.0.1] [3306] [root] [root]"
+    echo "  DOCKER"
+    echo "       allin docker restart <user@host> <name>"
+    echo "       allin docker stop <user@host> <name>"
+    echo "       allin docker rm <user@host> <name> --force"
+    echo "       allin docker ps <user@host>"
+    #echo "       allin docker add volume <volume> <user@host> <name>"
+    #echo "       $allin search link <criteria>"
     echo "  OPTIONS"
     echo "      --binding   binding port, DEFAUTL [8000] for web, and [8080] for api"
-    echo "      --data-url  mysql db url, DEFAULT [jdbc:mysql://127.0.0.1/test?user=root&password=root&characterEncoding=utf8"]
-    echo "                  short input [127.0.0.1/db]"
-    echo "      --endpoint  api endpoint only for web, DEFAULT [127.0.0.1:8080] "
-    echo "      --token     access token only for web, --token . means gen token auto"
     echo "      --volume    additional volume, means docker -v "
-    echo "      --ssr       deploy web as SSR server without option"
-    echo "  TIPS"
-    echo "      e.g. allin-cli deploy . craftperson@127.0.0.1 docker_name --token . --data-url 127.0.0.1/db"
+    echo "      --data-url  mysql db url, DEFAULT [jdbc:mysql://127.0.0.1/test?user=root&password=root&characterEncoding=utf8"]
+    echo "                  short input [127.0.0.1/db], ok = ok.zele.pro/test"
+    echo "      --endpoint  api endpoint only for web, DEFAULT [127.0.0.1:8080] "
+    #echo "      --token      access token only for web, if --data-url is set, token will be gen auto."
+    #echo "      --perm      permissions only for web, if --data-url is set, permissions will be gen auto."
+    echo "  e.g.  allin-cli deploy . craftperson@127.0.0.1 docker_name --data-url ok"
     exit
 }
+
 
 if [ ! $cmd ];then
    usage
@@ -62,12 +65,12 @@ elif [[ $cmd2 == dockerps ]];then
         usage
     fi
     cmd=cmddockerps  
-elif [[ $cmd2 == genurl ]];then   
+elif [[ $cmd2 == geturl ]];then   
     db=$3
     if [ ! $db ];then  
         usage
     fi
-    cmd=cmdgenurl
+    cmd=cmdgeturl
 elif [[ $cmd2 == setendpoint ]];then
     endpoint=$3
     ssh=$4
@@ -98,13 +101,12 @@ deployweb(){
     ssh=$2
     name=$3
     binding=$4
-    ssr=$5
-    endpoint=$6
-    token=$7
-    perms=$8
+    endpoint=$5
+    token=$6
+    perms=$7
 
     ## make sure args ok
-    echo $package, $ssh, $name, $binding, SSR=$ssr, $endpoint
+    echo $package, $ssh, $name, $binding, $endpoint
 
     ## ready for the path
     echo "=>ssh $ssh \"mkdir -p ~/$name/web\""
@@ -139,8 +141,8 @@ deployweb(){
     ALLIN_BIN="$ALLIN_BIN/ssh/$ALLIN"
     echo "=>scp $ALLIN_BIN $ssh:~/$name"
     scp $ALLIN_BIN $ssh:~/$name
-    echo "=>bash ~/$name/$ALLIN $package $name $binding $ssr && rm ~/$name/$ALLIN"
-    ssh $ssh "bash ~/$name/$ALLIN $package $name $binding $ssr && rm ~/$name/$ALLIN"
+    echo "=>bash ~/$name/$ALLIN $package $name $binding && rm ~/$name/$ALLIN"
+    ssh $ssh "bash ~/$name/$ALLIN $package $name $binding && rm ~/$name/$ALLIN"
 }
 
 deployapi(){
@@ -221,7 +223,7 @@ dockerps(){
    ssh $ssh "docker ps"
 }
 
-genurl(){
+geturl(){
    db=$1
    host=$2
    port=$3
@@ -383,10 +385,7 @@ if [[ $cmd == cmddeploy ]];then
            it=$arg
          elif [ "$arg"x == "--volume"x ];then
             it=$arg
-         elif [ "$arg"x == "--ssr"x ];then
-           it=$arg
-           ssr='--SSR'
-        fi
+         fi
 
          ## get the arg
          if [ "$it"x == "--ssh"x ];then
@@ -420,8 +419,12 @@ if [[ $cmd == cmddeploy ]];then
        ssh="$ssh@127.0.0.1"
     fi
 
-    ## if no token set, use ok
+    ## if no data set, set default
     if [ ! $data ];then 
+       data='127.0.0.1/test'
+    fi
+    ## ok equals ok.zele.pro
+    if [[ $data == ok || $data == OK ]];then 
        data='ok.zele.pro/test'
     fi
 
@@ -431,7 +434,7 @@ if [[ $cmd == cmddeploy ]];then
     elif [[ $data == [0-9.a-z]*/* ]];then
        data_name=${data#*/}  ## remove all before /
        data_host=${data%/*}  ## remove all after /
-       data=$(genurl $data_name $data_host '3306' 'root' 'root')
+       data=$(geturl $data_name $data_host '3306' 'root' 'root')
     fi
 
     ## for web
@@ -453,10 +456,7 @@ if [[ $cmd == cmddeploy ]];then
             binding='8000'
          fi
 
-         if [ ! $ssr ];then 
-            ssr='--'
-         fi
-
+         ## keep original implement for token
          if [[ ! $token ]];then 
             token='.'
          fi 
@@ -476,7 +476,7 @@ if [[ $cmd == cmddeploy ]];then
          fi
 
          ## deploy web 
-         deployweb $package $ssh $name $binding $ssr $endpoint $token $perms
+         deployweb $package $ssh $name $binding $endpoint $token $perms
     fi
 
     ## for api
@@ -519,7 +519,7 @@ elif [[ $cmd == cmddockerps ]];then
       ssh="$ssh@127.0.0.1"
    fi
    dockerps $ssh
-elif [[ $cmd == cmdgenurl ]];then
+elif [[ $cmd == cmdgeturl ]];then
    db=$3
    host=$4
    port=$5
@@ -539,7 +539,7 @@ elif [[ $cmd == cmdgenurl ]];then
       password=root
    fi
 
-   genurl $db $host $port $user $password
+   geturl $db $host $port $user $password
 
 elif [[ $cmd == cmdsetendpoint ]];then
    endpoint=$3
