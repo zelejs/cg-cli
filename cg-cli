@@ -788,6 +788,8 @@ dbgenperms() {
 }
 
 crudxml() {
+    xml=$1
+
     $CONFCLI table reset --save
 
       ## ** CODE-GENERATOR DO NOT SUPPORT MULTI EXECUTION **
@@ -803,13 +805,11 @@ crudxml() {
       ##gen
       ## END
 
-
       ## ** EXECUTE FOR EACH CRUD **
-
-      result=$(cat $cruds)
+      result=$(cat $xml)
+      result=${result##*\<cruds\>}  ## remove all before <cruds>
+      result=${result%%\<\/cruds\>*}  ## remove all after <cruds>
       result=${result//[[:space:]]/}  ## remove space
-      result=${result//\<cruds\>/}  ## remove <cruds>
-      result=${result//\<\/cruds\>/}  ## remove </cruds>
       result=${result//\<\/crud\>/\<\/crud\> }  ## replace </crud> with </crud>[[:space:]]
 
       for crud in $result;do
