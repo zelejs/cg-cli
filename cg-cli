@@ -612,15 +612,14 @@ dbrunsql(){
          echo $sql
          $dir/mysql-test/bin/mysql-test $url $sql
       done
-      exit
+      return
    fi
 
    ### run sql file
-   if [ -e  "$schemasql" ];then
+   if [ -f  "$schemasql" ];then
       $dir/mysql-test/bin/mysql-test $url $schemasql $param1 $param2 $param3
-      exit
+      return
    fi
-   
 
    ## if user schema sql, check exists
    if [ "$schemasql" ];then
@@ -633,12 +632,12 @@ dbrunsql(){
            echo $schemasql > /dev/null
       else
           echo "Not support sql: $schemasql"
-          exit
+          return
       fi
 
       ## run sql
       $dir/mysql-test/bin/mysql-test $url "$schemasql"
-      exit
+      return
    fi
 }
 
