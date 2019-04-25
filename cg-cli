@@ -892,6 +892,10 @@ codingsql() {
        cp $sql src/main/resources/sql
     fi 
 
+    ## run sql first
+    schema="src/main/resources/sql/$schemasql"
+    dbrunsql "$schema"
+
     ## verify cruds.xml
     crudxml $cruds
 }
