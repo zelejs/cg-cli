@@ -600,10 +600,11 @@ dbsanity() {
 }
 
 dbrunsql(){
-   schemasql=$1
-   param1=$2
-   param2=$3
-   param3=$4
+   url=$1
+   schemasql=$2
+   param1=$3
+   param2=$4
+   param3=$5
 
    if [ ! "$schemasql" ];then
        ## run all sql files
@@ -894,7 +895,7 @@ codingsql() {
 
     ## run sql first
     schema="src/main/resources/sql/$schemasql"
-    dbrunsql "$schema"
+    dbrunsql "$URL" "$schema"
 
     ## verify cruds.xml
     crudxml $cruds
@@ -959,7 +960,7 @@ elif [ "$cmd"x == "dbrunsql"x ];then
     param2=$6
     param3=$7
 
-    dbrunsql "$schema" $param1 $param2 $param3
+    dbrunsql "$URL" "$schema" $param1 $param2 $param3
 
 elif [ "$cmd"x == "dbshowtables"x ];then
    dbshowtables $URL
