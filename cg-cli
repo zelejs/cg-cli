@@ -833,20 +833,20 @@ crudinitializetable() {
 
 testinit(){
    ## copy default schema sql for crud test
-   if [ ! -e $dir/src/main/resources/sql/cg-mysql-schema.sql ];then
-      if [ ! -d $dir/src/main/resources/sql ];then
-          mkdir -p $dir/src/main/resources/sql
+   if [ ! -e src/main/resources/sql/cg-mysql-schema.sql ];then
+      if [ ! -d src/main/resources/sql ];then
+          mkdir -p src/main/resources/sql
       fi
-      cp $dir/assets/src/main/resources/sql/cg-mysql-schema.sql $dir/src/main/resources/sql
+      cp $dir/assets/src/main/resources/sql/cg-mysql-schema.sql src/main/resources/sql
    fi
-   if [ ! -e $dir/src/main/java/com/jfeat/AmApplication.java ];then
-      if [ ! -d $dir/src/main/java/com/jfeat ];then
-          mkdir -p $dir/src/main/java/com/jfeat
+   if [ ! -e src/main/java/com/jfeat/AmApplication.java ];then
+      if [ ! -d src/main/java/com/jfeat ];then
+          mkdir -p src/main/java/com/jfeat
       fi
-      cp $dir/assets/src/main/java/com/jfeat/AmApplication.java $dir/src/main/java/com/jfeat
+      cp $dir/assets/src/main/java/com/jfeat/AmApplication.java src/main/java/com/jfeat
    fi
-   if [ ! -e $dir/pom.xml ];then
-      cp $dir/assets/pom.xml $dir
+   if [ ! -e pom.xml ];then
+      cp $dir/assets/pom.xml ./
    fi
 
    ## reset src file
@@ -904,6 +904,15 @@ gen() {
    if [ "$gen"x == "--gen"x ];then
       echo "mvn com.jfeat:sb-code-generator:1.3.4:generate -f $pom"
       mvn com.jfeat:sb-code-generator:1.3.4:generate -f $pom
+      if [ ! -e src/main/java/com/jfeat/AmApplication.java ];then
+         if [ ! -d src/main/java/com/jfeat ];then
+             mkdir -p src/main/java/com/jfeat
+         fi
+         cp $dir/assets/src/main/java/com/jfeat/AmApplication.java src/main/java/com/jfeat
+      fi
+      if [ ! -e pom.xml ];then
+         cp $dir/assets/pom.xml ./
+      fi
    fi
 }
 
@@ -1242,7 +1251,7 @@ elif [ "$cmd"x == "crudinitializetable"x ];then
       if [ ! -d $dir/src/main/resources/sql ];then
           mkdir -p $dir/src/main/resources/sql
       fi
-      cp $dir/assets/src/main/resources/sql/cg-mysql-schema.sql $dir/src/main/resources/sql
+      cp $dir/assets/src/main/resources/sql/cg-mysql-schema.sql src/main/resources/sql
    fi
 
    shift ## shift crud
