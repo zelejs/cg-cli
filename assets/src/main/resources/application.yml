@@ -2,6 +2,10 @@
 server:
   port: 8088
 
+###################  jwt配置  ###################
+jwt:
+  encoded-key: L7A/6zARSkK1j7Vd5SDD9pSSqZlqF7mAhiOgRbgv9Smce6tf4cJnvKOjtKPxNNnWQj+2lQEScm3XIUjhW+YVZg==
+
 ###################  spring配置  ###################
 spring:
   profiles:
