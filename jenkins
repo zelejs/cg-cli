@@ -598,13 +598,17 @@ deploylib(){
     fi
 
     #backup rollback $standalone
-    echo "cp $standalone $standalone.rollback_$(date "+%m-%d")"
+    rollback=$standalone.rollback_$(date "+%m-%d")
+    if [ ! -f $rollback ];then
+       echo "cp $standalone $rollback"
+    fi
     war_fix=$(basename $standalone).fix_$(date "+%m-%d")
-    echo "cp $standalone $war_fix"
-    echo ===========================================
-    echo "jar 0uf $war_fix $libok"
-    echo "rm -rf $LIB_INF"
-    echo ===========================================
+    if [ ! -f $war_fix ];then
+       echo "cp $standalone $war_fix"
+    fi
+    echo '--------------------------------------------'
+    echo "jar 0uf $war_fix $libok && rm -rf $LIB_INF"
+    echo '--------------------------------------------'
     echo "mv $war_fix $standalone"
     echo "sh setup.sh"
 }
