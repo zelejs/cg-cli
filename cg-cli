@@ -913,6 +913,9 @@ gen() {
       if [ ! -e pom.xml ];then
          cp $dir/assets/pom.xml ./
       fi
+      if [ ! -e src/main/resources/application.yml ];then
+         cp $dir/assets/src/main/resources/application.yml src/main/resources/application.yml
+      fi
    fi
 }
 

@@ -23,10 +23,15 @@
         <crud-base.version>0.0.1</crud-base.version>
         <crud-plus.version>0.0.5</crud-plus.version>
         <crud-log.version>0.0.1</crud-log.version>
-        <sb-starter-test.version>1.0.0</sb-starter-test.version>
+        <uaas.version>3.0.0</uaas.version>
     </properties>
 
     <dependencies>
+        <dependency>
+            <groupId>com.jfeat</groupId>
+            <artifactId>uaas</artifactId>
+            <version>${uaas.version}</version>
+        </dependency>
         <dependency>
             <groupId>com.jfeat</groupId>
             <artifactId>crud-log</artifactId>
@@ -41,12 +46,6 @@
             <groupId>com.jfeat</groupId>
             <artifactId>crud-plus</artifactId>
             <version>${crud-plus.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.jfeat</groupId>
-            <artifactId>sb-starter-test</artifactId>
-            <version>${sb-starter-test.version}</version>
-            <scope>test</scope>
         </dependency>
 
         <!--spring boot依赖-->
