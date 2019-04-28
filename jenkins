@@ -15,7 +15,7 @@ usage() {
     echo "       jenkins deploy class <class> [container]"
     echo "       jenkins find class <jar> <lib> <class>"
     echo "       jenkins local find jar <jar>"
-    echo "       jenkins local put jar <jar> <link>"
+    echo "       jenkins local put jar <link> [jar]"
     exit
 }
 
@@ -137,12 +137,20 @@ elif [[ $cmd3 == localfindjar ]];then
     cmd=cmdlocalfindjar
     
 elif [[ $cmd3 == localputjar ]];then
-    jar=$4
-    link=$5
-
+    link=$4
+    jar=$5
     if [ ! $link ];then 
        usage
     fi
+
+    ## check jar exists
+    if [ $jar ];then 
+        if [ ! -f $jar ];then 
+           echo $jar not exists
+           exit
+        fi
+    fi
+
     cmd=cmdlocalputjar
 
  elif [[ $cmd2 == allindeploy ]];then
@@ -889,21 +897,59 @@ localfindjar() {
 
 
 localputjar() {
-    jar=$1
-    link=$2
-    links='/home/ci/.jenkins/workspace'
+    link=$1
+    jar=$2
+
+    ## not jar specified, find local
+    if [ ! $jar ];then 
+        result=$(find target/*.jar)
+        ## check result
+        i=0
+        for it in $result;do
+            i=$(($i+1))
+        done
+        if [ $i -eq 1 ];then
+            jar=$result
+        elif [ $i -gt 1 ];then
+            ## if more than 1
+            for it in $result;do
+                echo $it
+            done
+            exit
+        fi
+
+        ## if no match
+        if [ $i -eq 0 ];then
+            result=$(ls *.jar)
+            ## check result
+            i=0
+            for it in $result;do
+                i=$(($i+1))
+            done
+            if [ $i -eq 1 ];then
+                jar=$result
+            elif [ $i -gt 1 ];then
+                ## if more than 1
+                for it in $result;do
+                    echo $it
+                done
+                exit
+            fi
+        fi
+    fi
+
+    localdir='/home/ci/.jenkins/workspace'
 
     if [ -f ${PWD}/$jar ];then
         jar=$(readlink -f ${PWD}/$jar)
     fi
     
     if [ ! -f $jar ];then
-       if [ ! -f  $links/$jar ];then
-          echo $jar not exists in $links
+       if [ ! -f  $localdir/$jar ];then
+          echo $jar not exists in $localdir
           exit
        fi
     fi
-
 
     ## find the standalone jar
     #echo "find standalone package on jenkin /home/ci/link/$link"
@@ -999,9 +1045,9 @@ elif [[ $cmd == cmdlocalfindjar ]];then
     jar=$4
     localfindjar $jar
 elif [[ $cmd == cmdlocalputjar ]];then
-    jar=$4
-    link=$5
-    localputjar $jar $link
+    link=$4
+    jar=$5
+    localputjar $link $jar
 else 
     echo Unknown cmd: $cmd
 fi
