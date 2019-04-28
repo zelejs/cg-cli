@@ -580,7 +580,7 @@ dbseturl() {
     if [ "$uname"x == "Darwin"x ];then
         sed -i "" "s/<url>jdbc:mysql:\/\/[a-zA-Z0-9.:]*\/[a-zA-Z_]*/<url>jdbc:mysql:\/\/$mysql_host$mysql_port\/$mysql_db/;s/user=[a-zA-Z]*/user=$mysql_user/;s/password=[a-zA-Z]*/password=$mysql_pw/" $pom
     else
-        sed -i "s/<url>jdbc:mysql:\/\/[a-zA-Z0-9.:]\+\/[\w_]\+/<url>jdbc:mysql:\/\/$mysql_host$mysql_port\/$mysql_db/;s/user=\w\+/user=$mysql_user/;s/password=\w\+/password=$mysql_pw/" $pom
+        sed -i "s/<url>jdbc:mysql:\/\/[a-zA-Z0-9.:]\+\/[a-zA-Z_]*\+/<url>jdbc:mysql:\/\/$mysql_host$mysql_port\/$mysql_db/;s/user=\w\+/user=$mysql_user/;s/password=\w\+/password=$mysql_pw/" $pom
     fi
 
     #sanity
