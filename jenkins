@@ -304,15 +304,16 @@ uploadjar(){
     jarok=$(ssh -i $PEM ci@zele.pro "cd /home/ci/link/$link && $JAR tf $standalone | grep $jar")
     if [ ! $jarok ];then
          echo "$standalone does not contains $jar"
-         exit
+         echo "......"
+         jarok='BOOT-INF/lib/'$jar
     fi
     echo "$jarok"
 
 
     #cp jar to link
-    echo "=>scp target/$jar ci@zele.pro:/home/ci/link/$link/$jardir"
     jardir=$(dirname $jarok)
     ssh -i $PEM ci@zele.pro "cd /home/ci/link/$link && mkdir -p $jardir"
+    echo "=>scp target/$jar ci@zele.pro:/home/ci/link/$link/$jardir"
     scp -i $PEM target/$jar ci@zele.pro:/home/ci/link/$link/$jardir
 
     ## do jar 0uf
@@ -969,7 +970,7 @@ localputjar() {
     jarok=$(cd /home/ci/link/$link && $JAR tf $standalone | grep $jarlib)
     if [ ! $jarok ];then
          echo "$standalone does not contains $jarlib"
-         exit
+         echo "......"
     fi
     echo "$jarok"
 
