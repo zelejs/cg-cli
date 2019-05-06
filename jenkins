@@ -619,9 +619,14 @@ deploylib(){
     echo "jar 0uf $war_fix $libok && rm -rf $LIB_INF"
     echo '--------------------------------------------'
     echo "mv $war_fix $standalone"
-    echo "sh setup.sh"
+    if [ -f setup.sh ];then 
+       echo 'sh setup.sh'
+    elif [ -f service.sh ];then  
+       echo './service.sh restart'
+    else 
+       echo 'sh setup.sh || ./service.sh restart'
+    fi
 }
-
 
 deployclasses(){
     ################################
