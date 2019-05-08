@@ -914,6 +914,9 @@ gen() {
          cp $dir/assets/pom.xml ./
       fi
       if [ ! -e src/main/resources/application.yml ];then
+         if [ ! -d src/main/resources ];then
+             mkdir -p src/main/resources
+         fi
          cp $dir/assets/src/main/resources/application.yml src/main/resources/application.yml
       fi
    fi
