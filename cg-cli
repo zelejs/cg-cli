@@ -919,6 +919,8 @@ gen() {
          fi
          cp $dir/assets/src/main/resources/application.yml src/main/resources/application.yml
       fi
+      cp $dir/assets/.gitignore ./
+      cp $dir/assets/README.md ./
    fi
 }
 
