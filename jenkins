@@ -216,6 +216,8 @@ cleanm2() {
     ## start deploy
     if [ ! -e target/$jar ];then
        mvn clean install deploy
+    else 
+       mvn install deploy
     fi
     
     if [ -e target/$jar ];then
