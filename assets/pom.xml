@@ -23,15 +23,9 @@
         <crud-base.version>0.0.1</crud-base.version>
         <crud-plus.version>0.0.5</crud-plus.version>
         <crud-log.version>0.0.1</crud-log.version>
-        <uaas.version>3.0.0</uaas.version>
     </properties>
 
     <dependencies>
-        <dependency>
-            <groupId>com.jfeat</groupId>
-            <artifactId>uaas</artifactId>
-            <version>${uaas.version}</version>
-        </dependency>
         <dependency>
             <groupId>com.jfeat</groupId>
             <artifactId>crud-log</artifactId>
