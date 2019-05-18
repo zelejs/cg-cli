@@ -431,9 +431,9 @@ pulllib(){
     echo "=>find $libroot"
     find $libroot
     echo "=>clean remote BOOT-INF/WEB-INF"
-    #echo "=>ssh ci@zele.pro \"cd /home/ci/link/$link && rm -rf $libroot\""
+    echo "=>ssh ci@zele.pro \"cd /home/ci/link/$link && rm -rf $libroot\""
     ssh -i $PEM ci@zele.pro "cd /home/ci/link/$link && rm -rf $libroot"  
-    echo Done.
+    #echo Done.
 }
 
 exportclasses(){
@@ -535,7 +535,7 @@ deploylib(){
         else
             echo "=>jenkins pull lib $JENKINS_LINK $lib"
             pulllib $JENKINS_LINK $lib
-            find $LIB_INF
+            #find $LIB_INF
         fi
 
         ## check if it is the only jar 
@@ -634,21 +634,24 @@ deploylib(){
     #backup rollback $standalone
     rollback=$standalone.rollback_$(date "+%m-%d")
     if [ ! -f $rollback ];then
-       echo "cp $standalone $rollback"
+       echo "=>cp $standalone $rollback"
+       cp $standalone $rollback
     fi
     war_fix=$(basename $standalone).fix_$(date "+%m-%d")
     if [ ! -f $war_fix ];then
-       echo "cp $standalone $war_fix"
+       echo "=>cp $standalone $war_fix"
+       cp $standalone $war_fix
     fi
+    ##echo '--------------------------------------------'
+    echo "=>jar 0uf $war_fix $libok && rm -rf $LIB_INF"
+    jar 0uf $war_fix $libok && rm -rf $LIB_INF
     echo '--------------------------------------------'
-    echo "jar 0uf $war_fix $libok && rm -rf $LIB_INF"
-    echo '--------------------------------------------'
-    echo "mv $war_fix $standalone"
     if [ -f setup.sh ];then 
-       echo 'sh setup.sh'
+       echo "mv $war_fix $standalone && sh setup.sh"
     elif [ -f service.sh ];then  
-       echo './service.sh restart'
+       echo "mv $war_fix $standalone && ./service.sh restart"
     else 
+       echo "mv $war_fix $standalone"
        echo 'sh setup.sh || ./service.sh restart'
     fi
 }
