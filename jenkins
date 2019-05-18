@@ -538,8 +538,31 @@ deploylib(){
             find $LIB_INF
         fi
 
-        ## to end anyway
-        exit
+        ## check if it is the only jar 
+        ######################################
+        result=$(ls $LIB_INF/lib/*.jar)
+         ## get how many class
+        i=0
+        for lib in $result;do
+            i=$(($i+1))
+        done
+        if [ $i -eq 0 ];then
+            echo no match lib found !
+            exit
+        fi
+        ## if more thean 1
+        if [ $i -gt 1 ];then
+            for lib in $result;do
+                echo $lib
+            done
+            exit
+        fi
+        ## end check if it is the only jar 
+        ######################################
+
+        ## go ahead
+        lib=$result
+        ## exit
     fi
 
     ## if BOOT-INF/WEB-INF exists, handle the lib
