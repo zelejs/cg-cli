@@ -838,11 +838,12 @@ deployclass() {
 
 localfindjar() {
    link=$1
-   links='/home/ci/.jenkins/workspace'
+   #links='/home/ci/.jenkins/workspace'
+   links='/home/ci/link'
    
    ## not exists, just search in workspace
    if [ ! -e $link ];then
-      jarok=$(ls /home/ci/.jenkins/workspace | grep $link)
+      jarok=$(ls $links | grep $link)
    elif [ -d $link ];then
       ## if exists, and is directory, find itself
       jarok=$(find $link -name "*.jar") 
@@ -882,7 +883,7 @@ localfindjar() {
    #continue to search
    if [ ! -d $links/$jarok ];then
       jar=$(basename $jar)
-      jarok=$(ls /home/ci/.jenkins/workspace/$jarlink/target | grep $jar)
+      jarok=$(ls $links/$jarlink/target | grep $jar)
    fi
 
    i=0
