@@ -473,7 +473,7 @@ fi
 
 
 ### start ###
-dir=$(readlink -f $0)
+dir=$(readlink -f "$0")
 dir=$(dirname $dir)
 CONFCLI="perl -I$dir/local $dir/local/conf-cli"
 
@@ -481,6 +481,8 @@ CONFCLI="perl -I$dir/local $dir/local/conf-cli"
 POM=code-generator-pom.xml
 pom=${PWD}/gen/$POM
 
+# echo 1 $dir/assets/$POM
+   
 if [ ! -e $pom ];then
    if [ ! -d gen ];then
        mkdir gen
