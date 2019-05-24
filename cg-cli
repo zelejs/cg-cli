@@ -1078,7 +1078,7 @@ elif [ "$cmd"x == "crudonemany"x ];then
 
 
    ## second#2 step, generator all slaves && children
-   $CONFCLI crud reset --save
+   # $CONFCLI crud reset --save
    $CONFCLI table add $@ --save
 
    $CONFCLI list -T  ## do not need to show the config
