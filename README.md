@@ -20,7 +20,7 @@
     cg-cli crud group    <group> [...]
     cg-cli crud groupby  <group> <groupBy> <groupId>
     cg-cli crud init table <table-name> [...]
-    cg-cli crud -f       </path/to/cruds.xml>
+    cg-cli crud xml       </path/to/cruds.xml>
     cg-cli test crud one
     cg-cli test crud onemany
     cg-cli test crud onemany x2
