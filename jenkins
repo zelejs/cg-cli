@@ -840,6 +840,23 @@ localfindjar() {
    link=$1
    #links='/home/ci/.jenkins/workspace'
    links='/home/ci/link'
+
+    ## check link is only whole word
+    multi=$(ls /home/ci/link/*$link*)
+    ## check result
+        i=0
+        for it in $multi;do
+            i=$(($i+1))
+        done
+        if [ $i -eq 1 ];then
+            link=$link
+        elif [ $i -gt 1 ];then
+            ## if more than 1
+            for it in $multi;do
+                echo $it
+            done
+            exit
+        fi
    
    ## not exists, just search in workspace
    if [ ! -e $link ];then
@@ -935,6 +952,25 @@ localputjar() {
     link=$1
     jar=$2
 
+    links='/home/ci/link'
+
+    ## check link is only whole word
+    multi=$(ls $links/*$link*)
+    ## check result
+        i=0
+        for it in $multi;do
+            i=$(($i+1))
+        done
+        if [ $i -eq 1 ];then
+            link=$link
+        elif [ $i -gt 1 ];then
+            ## if more than 1
+            for it in $multi;do
+                echo $it
+            done
+            exit
+        fi
+
     ## not jar specified, find local
     if [ ! $jar ];then 
         result=$(find target/*.jar)
@@ -987,21 +1023,21 @@ localputjar() {
     fi
 
     ## find the standalone jar
-    #echo "find standalone package on jenkin /home/ci/link/$link"
-    standalone=$(cd /home/ci/link/$link && ls *-standalone.jar)
+    #echo "find standalone package on jenkin links/$link"
+    standalone=$(cd $links/$link && ls *-standalone.jar)
     if [ ! $standalone ];then
-        standalone=$(cd /home/ci/link/$link && ls *.war)
+        standalone=$(cd $links/$link && ls *.war)
     fi
     if [ ! $standalone ];then
         echo "no standalone jar found !"
         exit
     fi
-    echo "=>standalone jar: /home/ci/link/$link/$standalone"
+    echo "=>standalone jar: $links/$link/$standalone"
 
     ## check if standalone contains current jar
     jarlib=$(basename $jar)
     echo "=>check if $standalone contains $jar"
-    jarok=$(cd /home/ci/link/$link && $JAR tf $standalone | grep $jarlib)
+    jarok=$(cd $links/$link && $JAR tf $standalone | grep $jarlib)
     if [ ! $jarok ];then
          echo "$standalone does not contains $jarlib"
          echo "......"
@@ -1011,8 +1047,8 @@ localputjar() {
     ## do jar 0uf
     jardir=$(dirname $jarok)
     jarroot=${jardir%%\/*}  ## get ONLY the BOOT-INT
-    echo "=>cd /home/ci/link/$link && mkdir -p $jardir"
-    cd /home/ci/link/$link && mkdir -p $jardir
+    echo "=>cd $links/$link && mkdir -p $jardir"
+    cd $links/$link && mkdir -p $jardir
     echo "=>PWD"
     echo ${PWD}
     if [ ! -f $jar ];then
@@ -1023,6 +1059,7 @@ localputjar() {
     find $jardir
     echo "=>jar 0uf $standalone $jarok"
     $JAR 0uf $standalone $jarok
+    pwd
     rm -rf $jarroot && ls -l
     echo 'Done.'
 }
