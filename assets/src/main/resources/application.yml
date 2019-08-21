@@ -5,6 +5,7 @@ server:
 ###################  jwt配置  ###################
 jwt:
   encoded-key: L7A/6zARSkK1j7Vd5SDD9pSSqZlqF7mAhiOgRbgv9Smce6tf4cJnvKOjtKPxNNnWQj+2lQEScm3XIUjhW+YVZg==
+  normal-encoded-key: bm9ybWFsLWVuY29kZWQta2V5
 ###################  am配置  ###################
 am:
   swagger-open: true #是否开启swagger (true/false)
