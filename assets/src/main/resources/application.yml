@@ -56,7 +56,7 @@ logging:
 spring:
   profiles: dev
   datasource:
-      url: jdbc:mysql://120.79.77.207:3306/test?autoReconnect=true&useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull
+      url: jdbc:mysql://192.168.3.28:3306/test?autoReconnect=true&useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull
       username: root
       password: root
       sql-script-encoding: UTF-8
