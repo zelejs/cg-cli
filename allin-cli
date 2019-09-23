@@ -95,6 +95,12 @@ fi
 #dir=$(readlink -f $0)
 #dir=$(dirname $dir)
 #PEM=$dir/ssh/use-ci-jenkins-deploy.pem
+os_name=$(uname)
+if [[ $os_name == 'Darwin' ]];then
+   alias readlink="readlink"
+else
+   alias readlink="readlink -f"
+fi
 
 deployweb(){
     package=$1
@@ -136,7 +142,7 @@ deployweb(){
     ## run docker if no docker $name
     ## run remote script
     echo --
-    ALLIN_BIN=$(readlink -f $0)
+    ALLIN_BIN=$(readlink $0)
     ALLIN_BIN=$(dirname $ALLIN_BIN)
     ALLIN_BIN="$ALLIN_BIN/ssh/$ALLIN"
     echo "=>scp $ALLIN_BIN $ssh:~/$name"
@@ -183,7 +189,7 @@ deployapi(){
     fi
 
     ## run remote script
-    ALLIN_BIN=$(readlink -f $0)
+    ALLIN_BIN=$(readlink $0)
     ALLIN_BIN=$(dirname $ALLIN_BIN)
     ALLIN_BIN="$ALLIN_BIN/ssh/$ALLIN"
     echo "=>scp $ALLIN_BIN $ssh:~/$name"
@@ -556,7 +562,7 @@ elif [[ $cmd == cmdsetendpoint ]];then
 
    setendpoint $endpoint $ssh $name
 elif [[ $cmd == cmdsearchlink ]];then
-   dir=$(readlink -f $0)
+   dir=$(readlink $0)
    dir=$(dirname $dir)
    PEM=$dir/ssh/use-ci-jenkins-deploy.pem
 

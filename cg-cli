@@ -470,10 +470,15 @@ fi
 ##########################
 ## main                 ##
 ##########################
-
+os_name=$(uname)
+if [[ $os_name == 'Darwin' ]];then
+   dir=$(greadlink -f "$0")
+else 
+   dir=$(readlink -f "$0")
+fi
 
 ### start ###
-dir=$(readlink -f "$0")
+#dir=$(readlink -f "$0")
 dir=$(dirname $dir)
 CONFCLI="perl -I$dir/local $dir/local/conf-cli"
 

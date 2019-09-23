@@ -10,6 +10,7 @@
     },
     "bin": {
         "cg-cli": "./cg-cli",
+        "cg-compose": "./cg-compose",
         "remote": "./remote",
         "jenkins": "./jenkins",
         "allin-cli": "./allin-cli",

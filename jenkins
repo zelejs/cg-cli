@@ -162,7 +162,14 @@ fi
 
 
 ### start ###
-dir=$(readlink -f $0)
+os_name=$(uname)
+if [[ $os_name == 'Darwin' ]];then
+   dir=$(greadlink -f $0)
+else 
+   dir=$(readlink -f $0)
+fi
+
+#dir=$(readlink -f $0)
 dir=$(dirname $dir)
 PEM=$dir/ssh/use-ci-jenkins-deploy.pem
 JAR='/mnt/tools/java/bin/jar'

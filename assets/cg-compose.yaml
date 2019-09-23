@@ -1,0 +1,13 @@
+version: "1.0"
+
+module: test
+
+connection:
+   driver: mysql
+   host: 120.79.49.72/test
+   username: root
+   password: root
+
+tables:
+  - cg_category_type
+  - cg_category
