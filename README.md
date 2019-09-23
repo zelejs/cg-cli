@@ -1,8 +1,9 @@
 # 自动生成 CRUD 代码工具
 
 ## Install
-`$ git clone`https://github.com/kequandian/cg-cli
-`$ npm i -g`
+
+`$ git clone https://github.com/kequandian/cg-cli
+$ npm i -g`
 
 
 ## Usage
