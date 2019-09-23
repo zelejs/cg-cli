@@ -13,3 +13,6 @@ cruds.xml
 .vscode/
 WEB-INF/
 BOOT-INF/
+.classpath
+.factorypath
+.settings/

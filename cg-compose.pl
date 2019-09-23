@@ -27,6 +27,8 @@ sub usage {
     println "";
     println 'Commands:';
     println '  init               Run sql(src/main/resources/sql/*-schema.sql) and gen or update persistence.';
+    println '  build              Build API src base on the generated *-schema.sql file and cruds.xml';
+
     #echo '  bundle             Generate a Docker bundle from the Compose file'
 
     exit(0);
@@ -63,11 +65,11 @@ if ( ! (-f $compose_file) ){
 
 if ( $cmd =~ /^init$/ ){
    $cmd = cmdinittable;
-
+elsif($cmd =~ // ){
+   $cmd = cmdbuildapp;
 }else{
     usage;
 }
-
 
 sub inittable {
    #println 'Start to init tables ...';
@@ -136,16 +138,21 @@ sub inittable {
    print `$tables_line $param`;
 }
 
+sub buildapp{
+   println "Start build app...";
+}
 
 
 ## main
 if ( $cmd == cmdinittable ){
    inittable;
 
+if ( $cmd == cmdbuildapp )
+   buildapp;
+
 }else{
     println "Unknown cmd: $cmd";
 }
-
 
 
 sub read_lines{

@@ -1011,7 +1011,9 @@ elif [ "$cmd"x == "dbgenperms"x ];then
    dbgenperms $dataurl $user
 
 elif [ "$cmd"x == "crudreset"x ];then
-   echo done #do nothing
+   #reset table and cruds.xml
+   $CONFCLI table reset --save
+   $CONFCLI crud reset --save
 
 elif [ "$cmd"x == "crudone"x -o "$cmd"x == "testcrudone"x ];then
    master=$3
@@ -1045,7 +1047,7 @@ elif [ "$cmd"x == "crudone"x -o "$cmd"x == "testcrudone"x ];then
 
    # config table
    $CONFCLI table reset --save
-   $CONFCLI crud reset --save
+   #$CONFCLI crud reset --save
    for master in $@;do
       if [[ $master == --* ]];then
          continue
@@ -1073,7 +1075,7 @@ elif [ "$cmd"x == "crudonemany"x ];then
    # $CONFCLI table add $master $@ --save
 
    # config crud
-   $CONFCLI crud reset --save
+   #$CONFCLI crud reset --save
    $CONFCLI crud add onemany $master $@ --save
    # config end
 
@@ -1100,7 +1102,7 @@ elif [ "$cmd"x == "testcrudonemany"x ];then
    #$CONFCLI table add $master $slave --save
 
    # config crud
-   $CONFCLI crud reset --save
+   #$CONFCLI crud reset --save
    $CONFCLI crud add onemany $master $slave  --save
    # config end
 
@@ -1146,7 +1148,7 @@ elif [ "$cmd"x == "crudmanymany"x -o "$cmd"x == "testcrudmanymany"x ];then
    #$CONFCLI table add $master $peer $relation --save
 
    # config crud
-   $CONFCLI crud reset --save
+   #$CONFCLI crud reset --save
    $CONFCLI crud add manymany $master $peer $relation --save
    # config end
    
@@ -1174,7 +1176,7 @@ elif [ "$cmd"x == "crudgroup"x -o "$cmd"x == "crudgroupby"x -o "$cmd"x == "testc
          #$CONFCLI table add $group --save
 
          # config crud
-         $CONFCLI crud reset --save
+         #$CONFCLI crud reset --save
          $CONFCLI crud add group $group --save
          # config end
 
