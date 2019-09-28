@@ -65,7 +65,8 @@ if ( ! (-f $compose_file) ){
 
 if ( $cmd =~ /^init$/ ){
    $cmd = cmdinittable;
-elsif($cmd =~ // ){
+
+}elsif($cmd =~ /build/ ){
    $cmd = cmdbuildapp;
 }else{
     usage;
@@ -144,14 +145,14 @@ sub buildapp{
 
 
 ## main
-if ( $cmd == cmdinittable ){
-   inittable;
+if ( $cmd =~ cmdinittable ){
+   &inittable;
 
-if ( $cmd == cmdbuildapp )
-   buildapp;
+}elsif ( $cmd =~ cmdbuildapp ){
+   &buildapp;
 
 }else{
-    println "Unknown cmd: $cmd";
+    println "Unknown cmd: $cmd\n";
 }
 
 
