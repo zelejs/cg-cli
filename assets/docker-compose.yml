@@ -1,0 +1,67 @@
+version: '3'
+services:
+  mall-api:
+    image: zelejs/app-openjre11
+    container_name: mall-api
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ~/mall-api:/webapps
+    ports:
+      - '8088:8080'
+  webapp:
+    container_name: mall-webapp
+    image: 'daocloud.io/library/tomcat:7-jre8'
+    ports:
+      - 8080:8080
+    volumes:
+      - ./mall-webapp/logs:/usr/local/tomcat/logs
+      - ./mall-webapp/config/setenv.sh:/usr/local/tomcat/bin/setenv.sh
+      - ./mall-webapp/config/server.xml:/usr/local/tomcat/conf/server.xml
+      - ./mall-webapp/config:/usr/local/tomcat/config
+      - ./mall-webapp/webapps:/usr/local/tomcat/webapps
+      - ./images:/images
+    environment:
+      TZ: "Asia/Shanghai"
+    depends_on:
+     - mysql
+     - redis
+  nginx:
+    container_name: mall-nginx
+    image: 'daocloud.io/library/nginx:latest'
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - ./mall-nginx/conf.d:/etc/nginx/conf.d
+      - ./mall-nginx/logs:/var/log/nginx
+      - ./mall-nginx/cert:/cert
+      - ./images:/images
+    environment:
+      TZ: "Asia/Shanghai"
+  redis:
+    container_name: mall-redis
+    image: 'daocloud.io/library/redis:3.2.9'
+    environment:
+      TZ: "Asia/Shanghai"
+    ports:
+      - 6379:6379
+    volumes:
+      - ./mall-redis/conf:/usr/local/etc/redis
+    command:
+      redis-server
+  mysql:
+    container_name: mall-mysql
+    image: 'daocloud.io/library/mysql:5.7'
+    restart: always
+    environment:
+      TZ: "Asia/Shanghai"
+      MYSQL_DATABASE: 'alliance'
+      MYSQL_ROOT_PASSWORD: 'root'
+      MYSQL_USER: 'jfeat'
+      MYSQL_PASSWORD: 'jfeat'
+    volumes:
+      - ./mall-mysql/data:/var/lib/mysql
+      - ./mall-mysql/config/my.cnf:/etc/my.cnf
+      #- ./mall-mysql/init:/docker-entrypoint-initdb.d/
+    ports:
+      - '3306:3306'
