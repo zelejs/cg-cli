@@ -1,0 +1,13 @@
+version: '3'
+services:
+  allin-module:
+    image: zelejs/allin-web:slim-openjre11
+    container_name: allin-module
+    environment:
+       ENDPOINT: "http://192.168.3.10:8080"
+    volumes:
+      - ./web/dist:/var/www/html
+      - ./api:/webapps
+    ports:
+      - '8080:8080'
+      - '8000:80'
