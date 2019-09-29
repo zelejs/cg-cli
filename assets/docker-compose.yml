@@ -1,32 +1,53 @@
 version: '3'
 services:
-  mall-api:
-    image: zelejs/app-openjre11
+  theapp-api:
+    image: daocloud.io/library/node:8.11.2
     container_name: mall-api
     volumes:
       - /etc/localtime:/etc/localtime:ro
-      - ~/mall-api:/webapps
-    ports:
-      - '8088:8080'
-  webapp:
-    container_name: mall-webapp
-    image: 'daocloud.io/library/tomcat:7-jre8'
-    ports:
-      - 8080:8080
-    volumes:
-      - ./mall-webapp/logs:/usr/local/tomcat/logs
-      - ./mall-webapp/config/setenv.sh:/usr/local/tomcat/bin/setenv.sh
-      - ./mall-webapp/config/server.xml:/usr/local/tomcat/conf/server.xml
-      - ./mall-webapp/config:/usr/local/tomcat/config
-      - ./mall-webapp/webapps:/usr/local/tomcat/webapps
-      - ./images:/images
+      - ~/theapp-api:/webapps
+      - ./conf/config.js:/gateway/config.js \
+      - ./conf/config.json:/gateway/config.json \
+      -v ./dist:/gateway \
+      -v ./logs:/gateway/logs \
+      - ./portal:/portal \
+      -v ./portal/tmp:/tmp \
+
     environment:
       TZ: "Asia/Shanghai"
+    ports:
+      - '8088:8080'
     depends_on:
      - mysql
      - redis
-  nginx:
-    container_name: mall-nginx
+  theapp-web:
+     image: daocloud.io/library/node:8.11.2
+    container_name: mall-web
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ~/theapp-api:/webapps
+      - ./conf/config.js:/gateway/config.js \
+      - ./conf/config.json:/gateway/config.json \
+      - ./dist:/gateway \
+      - ./logs:/gateway/logs \
+    environment:
+      TZ: "Asia/Shanghai"
+    ports:
+      - '8081:8080'
+  container_name: theapp-gateway
+    image: 'daocloud.io/library/nginx:latest'
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - ./mall-nginx/conf.d:/etc/nginx/conf.d
+      - ./mall-nginx/logs:/var/log/nginx
+      - ./mall-nginx/cert:/cert
+      - ./images:/images
+    environment:
+      TZ: "Asia/Shanghai"
+  theapp-gateway:
+    container_name: theapp-gateway
     image: 'daocloud.io/library/nginx:latest'
     ports:
       - 80:80
@@ -39,7 +60,7 @@ services:
     environment:
       TZ: "Asia/Shanghai"
   redis:
-    container_name: mall-redis
+    container_name: redis
     image: 'daocloud.io/library/redis:3.2.9'
     environment:
       TZ: "Asia/Shanghai"
@@ -50,7 +71,7 @@ services:
     command:
       redis-server
   mysql:
-    container_name: mall-mysql
+    container_name: mysql
     image: 'daocloud.io/library/mysql:5.7'
     restart: always
     environment:
