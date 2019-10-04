@@ -1,0 +1,88 @@
+version: '3'
+services:
+  theapp-api:
+    image: daocloud.io/library/node:8.11.2
+    container_name: mall-api
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ~/theapp-api:/webapps
+      - ./conf/config.js:/gateway/config.js \
+      - ./conf/config.json:/gateway/config.json \
+      -v ./dist:/gateway \
+      -v ./logs:/gateway/logs \
+      - ./portal:/portal \
+      -v ./portal/tmp:/tmp \
+
+    environment:
+      TZ: "Asia/Shanghai"
+    ports:
+      - '8088:8080'
+    depends_on:
+     - mysql
+     - redis
+  theapp-web:
+     image: daocloud.io/library/node:8.11.2
+    container_name: mall-web
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ~/theapp-api:/webapps
+      - ./conf/config.js:/gateway/config.js \
+      - ./conf/config.json:/gateway/config.json \
+      - ./dist:/gateway \
+      - ./logs:/gateway/logs \
+    environment:
+      TZ: "Asia/Shanghai"
+    ports:
+      - '8081:8080'
+  container_name: theapp-gateway
+    image: 'daocloud.io/library/nginx:latest'
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - ./mall-nginx/conf.d:/etc/nginx/conf.d
+      - ./mall-nginx/logs:/var/log/nginx
+      - ./mall-nginx/cert:/cert
+      - ./images:/images
+    environment:
+      TZ: "Asia/Shanghai"
+  theapp-gateway:
+    container_name: theapp-gateway
+    image: 'daocloud.io/library/nginx:latest'
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - ./mall-nginx/conf.d:/etc/nginx/conf.d
+      - ./mall-nginx/logs:/var/log/nginx
+      - ./mall-nginx/cert:/cert
+      - ./images:/images
+    environment:
+      TZ: "Asia/Shanghai"
+  redis:
+    container_name: redis
+    image: 'daocloud.io/library/redis:3.2.9'
+    environment:
+      TZ: "Asia/Shanghai"
+    ports:
+      - 6379:6379
+    volumes:
+      - ./mall-redis/conf:/usr/local/etc/redis
+    command:
+      redis-server
+  mysql:
+    container_name: mysql
+    image: 'daocloud.io/library/mysql:5.7'
+    restart: always
+    environment:
+      TZ: "Asia/Shanghai"
+      MYSQL_DATABASE: 'alliance'
+      MYSQL_ROOT_PASSWORD: 'root'
+      MYSQL_USER: 'jfeat'
+      MYSQL_PASSWORD: 'jfeat'
+    volumes:
+      - ./mall-mysql/data:/var/lib/mysql
+      - ./mall-mysql/config/my.cnf:/etc/my.cnf
+      #- ./mall-mysql/init:/docker-entrypoint-initdb.d/
+    ports:
+      - '3306:3306'
