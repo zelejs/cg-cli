@@ -2,27 +2,22 @@
 use lib qw(local);
 use YAML::Tiny;
 use Data::Dumper;
+use File::Copy;
 
-my $cmd = shift @ARGV;
-my $param = shift @ARGV;
-my $cmd2 = "$cmd$param";
 
 sub println{
    my ($line) = @_;
    print "$line\n";
 }
 
-my $DEFAULT_COMPOSE = "cg-compose.yaml";
-my $DEFAULT_COMPOSE_PATH = "./cg-compose.yaml";
-
 sub usage {
     println "Usage:";
-    println "   cg-compose [-f <arg>...] [options] [COMMAND] [ARGS...]";
+    println "   cg-compose [options] [COMMAND] [ARGS...]";
     println "   cg-compose -h|--help";
     println "";
     println 'Options:';
-    #println '  -f, --file FILE             Specify an alternate compose file (default: cg-compose.yml)';
-    println '   --gen                       generate option for cg-cli --gen';
+    println '  -f, --file FILE             Specify an alternate compose file (default: cg-compose.yml)';
+    println '  --gen                       --gen for cg-cli';
 
     println "";
     println 'Commands:';
@@ -30,18 +25,48 @@ sub usage {
     println '  build              Build API src base on the generated *-schema.sql file and cruds.xml';
 
     #echo '  bundle             Generate a Docker bundle from the Compose file'
-
-    exit(0);
 }
 
-if ( ! $cmd ){
+## for -h|--help
+my $HELP = $ARGV[0];
+if ( ! $HELP || $HELP=~/^-h$/ || $HELP=~/^--help$/ ){
    usage;
+   exit(0);
 }
 
-#if (! (-f $DEFAULT_COMPOSE) ){
-#   println "$DEFAULT_COMPOSE not exist !";
-#   exit(0);
-#}
+my @argv=();
+
+## check option
+my $DEFAULT_COMPOSE_FILE = "cg-compose.yaml";
+## 
+my $COMPOSE_FILE=undef;
+my $OP_COMPOSE_FILE=undef;  ## whether specific the cg-compose file
+my $OP_GEN=undef;    ## whether --gen 
+foreach(@ARGV){
+    if(/^-f$/ || /^--file$/){
+      $OP_COMPOSE_FILE=$_;
+      next;
+    }
+    if($OP_COMPOSE_FILE && !$COMPOSE_FILE){
+       $COMPOSE_FILE=$_;
+       next;
+    }
+    if(/^--gen$/){
+      $OP_GEN=$_;
+      next;
+    }
+    push(@argv,$_);
+}
+if(!$COMPOSE_FILE){
+   $COMPOSE_FILE="./$DEFAULT_COMPOSE_FILE";
+}
+#print $COMPOSE_FILE."\n";
+
+
+##########################
+### main
+##########################
+my $cmd = shift @argv;
 
 ## main
 my $os_name=`uname`;
@@ -58,33 +83,104 @@ $dir =~ s/[\r\n\s\t]+$//;
 $dir =~ s/\/[\w\-\.]+$//;
 
 ## working dir
-my $compose_file="./$DEFAULT_COMPOSE";
+my $compose_file="$COMPOSE_FILE";
 if ( ! (-f $compose_file) ){
-   print `cp $dir/assets/$DEFAULT_COMPOSE $compose_file`;
+   print `cp $dir/assets/$DEFAULT_COMPOSE_FILE $compose_file`;
 }
 
+## move all .sql file to src/main/resources/sql/*-schema.sql
+my $sqlsdir='./src/main/resources/sql';
+my $files_ref=&read_sql_files;
+my @files=@{$files_ref};
+if($files>0){
+   if(!(-d $sqlsdir)){
+      mkdir($sqlsdir);
+   }
+}
+foreach(@files){
+   my $file=$_;
+   if(/-schema\.sql/){
+      print `mv $file $sqlsdir`;
+   }else{
+      s/\.sql/-schema.sql/;
+      print `mv $file $sqlsdir/$_`;
+   }
+}
+
+
+my $YAML = init_config($compose_file);
+
+## pre-process cmd
 if ( $cmd =~ /^init$/ ){
    $cmd = cmdinittable;
 
 }elsif($cmd =~ /build/ ){
    $cmd = cmdbuildapp;
 }else{
-    usage;
+    print "Unkown command :".$cmd."\n";
+    exit(1);
 }
 
-sub inittable {
-   #println 'Start to init tables ...';
 
-   my $yaml_file = $DEFAULT_COMPOSE_PATH;
+## main
+if ( $cmd =~ cmdinittable ){
+   &inittable;
+
+}elsif ( $cmd =~ cmdbuildapp ){
+   &buildapp;
+
+}else{
+    println "Unknown command: $cmd\n";
+}
+
+
+
+sub inittable {
+   println 'Start to init tables ...';
+
+   print `cg-cli db run sql`;
+   #print `cg-cli db show tables`;
+
+   ## init tables
+   my $command_line = "cg-cli crud init table ";
+
+   my @target_tables = @{$YAML->[0]->{tables}};
+   foreach(@target_tables){
+      $command_line = "$command_line $_";
+   }
+
+   if($OP_GEN){
+      push(@argv, '--gen');
+   }
+
+   #println $tables_line;
+   print `$command_line @argv`;
+}
+
+
+sub buildapp{
+   println "Start build app...";
+
+   if($OP_GEN){
+      push(@argv, '--gen');
+   }
+
+   print `cg-cli crud xml @argv`;
+}
+
+
+sub init_config{
+   my ($yaml_file) = @_;
+
    my @yaml_lines = &read_lines($yaml_file);
 
    ## remove comment lines and comments after line
     my @lines=();
     foreach(@yaml_lines){
-        if(/^#/){
-            next;
+        if(/^#/){  ## skip comment
+           next;
         }
-        s/#.+//;
+        s/#.+//;   ## remove comment tail
         push(@lines,$_);
     }
 
@@ -124,37 +220,8 @@ sub inittable {
    print `cg-cli db set url $db $ip $port $username $password`;
    print `cg-cli db get url`;
 
-   ## run sql
-   print `cg-cli db run sql`;
-   #print `cg-cli db show tables`;
-
-   ## init tables
-   my @target_tables = @{$yaml->[0]->{tables}};
-   my $tables_line = "cg-cli crud init table ";
-   foreach(@target_tables){
-      $tables_line = "$tables_line $_";
-   }
-
-   #println $tables_line;
-   print `$tables_line $param`;
+   return $yaml;
 }
-
-sub buildapp{
-   println "Start build app...";
-}
-
-
-## main
-if ( $cmd =~ cmdinittable ){
-   &inittable;
-
-}elsif ( $cmd =~ cmdbuildapp ){
-   &buildapp;
-
-}else{
-    println "Unknown cmd: $cmd\n";
-}
-
 
 sub read_lines{
   my ($in) = @_;
@@ -166,4 +233,14 @@ sub read_lines{
   close $fh;
 
   return @data;
+}
+
+
+sub read_sql_files{
+    my $workingdir="./";
+    opendir(my $dh, $workingdir) || die "Can't opendir workingdir: $!";
+    my @dots = grep { /\.sql/ } readdir($dh);
+    #my @dots = readdir($dh);
+    closedir $dh;
+    return \@dots;
 }

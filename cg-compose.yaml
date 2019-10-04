@@ -1,14 +1,13 @@
 version: "1.0"
 
-module: test 
-
 connection:
    driver: mysql
    host: 120.79.49.72/test
    username: root
    password: root
 
+module: test 
+
 tables:
   - t_category_type
   - t_category
-
