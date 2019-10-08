@@ -17,7 +17,7 @@ sub usage {
     println "";
     println 'Options:';
     println '  -f, --file FILE             Specify an alternate compose file (default: cg-compose.yml)';
-    println '  --gen                       --gen for cg-cli';
+    #println '  --gen                       --gen for cg-cli';
 
     println "";
     println 'Commands:';
@@ -27,18 +27,22 @@ sub usage {
     #echo '  bundle             Generate a Docker bundle from the Compose file'
 }
 
+my $DEFAULT_COMPOSE_FILE = "cg-compose.yaml";
+
 ## for -h|--help
 my $HELP = $ARGV[0];
 if ( ! $HELP || $HELP=~/^-h$/ || $HELP=~/^--help$/ ){
    usage;
-   exit(0);
+
+   ## exit right now if exist cg-compose.yaml
+   if(-f $DEFAULT_COMPOSE_FILE){
+      exit(0);
+   }
 }
 
 my @argv=();
 
 ## check option
-my $DEFAULT_COMPOSE_FILE = "cg-compose.yaml";
-## 
 my $COMPOSE_FILE=undef;
 my $OP_COMPOSE_FILE=undef;  ## whether specific the cg-compose file
 my $OP_GEN=undef;    ## whether --gen 
@@ -57,10 +61,12 @@ foreach(@ARGV){
     }
     push(@argv,$_);
 }
+
 if(!$COMPOSE_FILE){
    $COMPOSE_FILE="./$DEFAULT_COMPOSE_FILE";
 }
 #print $COMPOSE_FILE."\n";
+$OP_GEN='--gen';  ## default gen directly
 
 
 ##########################
@@ -87,6 +93,12 @@ my $compose_file="$COMPOSE_FILE";
 if ( ! (-f $compose_file) ){
    print `cp $dir/assets/$DEFAULT_COMPOSE_FILE $compose_file`;
 }
+
+## cp cg-compose.yaml file and check args again
+if ( ! $HELP || $HELP=~/^-h$/ || $HELP=~/^--help$/ ){
+   exit(0);
+}
+
 
 ## move all .sql file to src/main/resources/sql/*-schema.sql
 my $sqlsdir='./src/main/resources/sql';
@@ -149,6 +161,7 @@ sub inittable {
       $command_line = "$command_line $_";
    }
 
+   ## default w/ --gen
    if($OP_GEN){
       push(@argv, '--gen');
    }
@@ -161,6 +174,7 @@ sub inittable {
 sub buildapp{
    println "Start build app...";
 
+   ## default w/ --gen
    if($OP_GEN){
       push(@argv, '--gen');
    }
