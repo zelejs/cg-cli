@@ -2,7 +2,9 @@
 ## CONFCLI="perl -I$dir/local $dir/local/conf-cli"
 usage() {
   echo "Usage:"
-  echo "    cg-cli [OPTIONS] --help --gen"
+  echo "    cg-cli <OPTIONS> [-h|--help] [--gen]"
+  echo ''
+  echo " OPTIONS:"
   echo "    cg-cli module get"
   echo "    cg-cli module set <module-name> [parent-module]"
   echo "    cg-cli db get url"
@@ -35,7 +37,7 @@ usage() {
 }
 usage_db() {
   echo "Usage:"
-  echo "    cg-cli [OPTIONS] --help --gen"
+  echo "    cg-cli <OPTIONS> [-h|--help] [--gen]"
   echo "    cg-cli db get url"
   echo "    cg-cli db set url <database> [localhost] [3306] [root] [root]"
   echo "    cg-cli db sanity [url]"
@@ -47,7 +49,7 @@ usage_db() {
 }
 usage_crud() {
   echo "Usage:"
-  echo "    cg-cli [OPTIONS] --help --gen"
+  echo "    cg-cli <OPTIONS> [-h|--help] [--gen]"
   echo "    cg-cli crud reset"
   echo "    cg-cli crud one      <master> [...]"
   echo "    cg-cli crud onemany  <master> <slave:mid:id> [slave:mid1,mid2] [slave::relation:mid:id] [...]"
@@ -58,7 +60,7 @@ usage_crud() {
 }
 usage_test() {
   echo "Usage:"
-  echo "    cg-cli [OPTIONS] --help --gen"
+  echo "    cg-cli <OPTIONS> [-h|--help] [--gen]"
   echo "    cg-cli test crud one"
   echo "    cg-cli test crud onemany"
   echo "    cg-cli test crud onemany x2"
@@ -76,7 +78,7 @@ if [ ! $cmd ];then
    exit
 fi
 for p in $@;do
-   if [ "$p"x == "--help"x ];then
+   if [ "$p"x == "-h"x -o "$p"x == "--help"x ];then
       usage
       exit
    fi
@@ -462,7 +464,7 @@ elif [ "$cmd"x == "coding"x ];then
        exit
     fi
 else
-    usage
+    echo "Unknow command: $cmd";
     exit
 fi
 
@@ -1047,14 +1049,22 @@ elif [ "$cmd"x == "crudone"x -o "$cmd"x == "testcrudone"x ];then
 
    # config table
    $CONFCLI table reset --save
-   #$CONFCLI crud reset --save
-   for master in $@;do
-      if [[ $master == --* ]];then
-         continue
-      fi
- 
+   if [ "$cmd"x == "testcrudone"x ];then
+      $CONFCLI crud reset --save
+   fi
+
+   ## for crudone
+   if [ "$cmd"x == "crudone"x ];then 
+      for m in $@;do
+         if [[ $m == --* ]];then
+            continue
+         fi
+         $CONFCLI crud add one $m --save
+      done
+   else
+      ## testcrudone
       $CONFCLI crud add one $master --save
-   done
+   fi
    
    $CONFCLI list -t -c
    ## gen crud
@@ -1102,7 +1112,7 @@ elif [ "$cmd"x == "testcrudonemany"x ];then
    #$CONFCLI table add $master $slave --save
 
    # config crud
-   #$CONFCLI crud reset --save
+   $CONFCLI crud reset --save
    $CONFCLI crud add onemany $master $slave  --save
    # config end
 
@@ -1148,7 +1158,9 @@ elif [ "$cmd"x == "crudmanymany"x -o "$cmd"x == "testcrudmanymany"x ];then
    #$CONFCLI table add $master $peer $relation --save
 
    # config crud
-   #$CONFCLI crud reset --save
+   if [ "$cmd"x == "testcrudmanymany"x ];then
+      $CONFCLI crud reset --save
+   fi
    $CONFCLI crud add manymany $master $peer $relation --save
    # config end
    
@@ -1229,7 +1241,11 @@ elif [ "$cmd"x == "crudgroup"x -o "$cmd"x == "crudgroupby"x -o "$cmd"x == "testc
       #$CONFCLI table add $group --save
 
       # config crud
-      $CONFCLI crud reset --save
+      if [ "$cmd"x == "testcrudgroupby"x ];then
+         $CONFCLI crud reset --save
+      elif [ "$cmd"x == "testcrudgroupbyfield"x ];then
+         $CONFCLI crud reset --save
+      fi
       $CONFCLI crud add group $group --save
       # config end
 
@@ -1245,7 +1261,11 @@ elif [ "$cmd"x == "crudgroup"x -o "$cmd"x == "crudgroupby"x -o "$cmd"x == "testc
       #$CONFCLI table add $groupBy --save
 
       # config crud
-      $CONFCLI crud reset --save
+      if [ "$cmd"x == "testcrudgroupby"x ];then
+         $CONFCLI crud reset --save
+      elif [ "$cmd"x == "testcrudgroupbyfield"x ];then
+         $CONFCLI crud reset --save
+      fi
       $CONFCLI crud add group $group $groupBy $groupId --save
       # config end
 
