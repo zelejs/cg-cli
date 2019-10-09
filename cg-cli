@@ -17,7 +17,7 @@ usage() {
   echo "    cg-cli db gen perms <data-url> <user>"
   echo "    cg-cli crud reset"
   echo "    cg-cli crud one      <master> [...]"
-  echo "    cg-cli crud onemany  <master> <slave:mid:id> [slave:mid1,mid2] [slave:relation::mid:id] [...]"
+  echo "    cg-cli crud onemany  <master> <slave:mid> [slave:mid1,mid2] [slave:relation::mid:id] [...]"
   echo "    cg-cli crud manymany <master> <peer> <relation>"
   echo "    cg-cli crud group    <group> [...]"
   echo "    cg-cli crud groupby  <group> <groupBy> <groupId>"
@@ -72,7 +72,7 @@ usage_test() {
 
 ## start
 cmd=$1
-gen='-'
+op_gen=$9  ## null 
 if [ ! $cmd ];then
    usage
    exit
@@ -85,7 +85,7 @@ for p in $@;do
 
    ## get check
    if [ "$p"x == "--gen"x ];then
-      gen='--gen'
+      op_gen='--gen'
    fi
 done
 
@@ -834,7 +834,7 @@ crudxml() {
 }
 
 crudinitializetable() {
-   if [ "$gen"x == "--gen"x ];then
+   if [ $op_gen ];then
       echo "mvn -Dinit=true com.jfeat:sb-code-generator:1.3.4:generate -f $pom"
       mvn -Dinit=true com.jfeat:sb-code-generator:1.3.4:generate -f $pom
    fi
@@ -910,7 +910,7 @@ codingsql() {
 }
 
 gen() {
-   if [ "$gen"x == "--gen"x ];then
+   if [ $op_gen ];then
       echo "mvn com.jfeat:sb-code-generator:1.3.4:generate -f $pom"
       mvn com.jfeat:sb-code-generator:1.3.4:generate -f $pom
       if [ ! -e src/main/java/com/jfeat/AmApplication.java ];then
@@ -1093,19 +1093,21 @@ elif [ "$cmd"x == "crudonemany"x ];then
    ## gen crud
    gen
 
-
    ## second#2 step, generator all slaves && children
-   # $CONFCLI crud reset --save
-   $CONFCLI table add $@ --save
+   if [ $op_gen ];then
 
-   $CONFCLI list -T  ## do not need to show the config
-   ## gen crud
-   gen
+      $CONFCLI crud reset --save
+      $CONFCLI table add $@ --save
+
+      $CONFCLI list -T  ## do not need to show the config
+      ## gen crud
+      gen
+   fi
 
 elif [ "$cmd"x == "testcrudonemany"x ];then
    master='cg_master_resource'
    slave='cg_master_resource_item:master_id'
-   slave_master='cg_master_resource_item'
+   slave_table='cg_master_resource_item'
 
    # config table
    $CONFCLI table reset --save
@@ -1121,12 +1123,23 @@ elif [ "$cmd"x == "testcrudonemany"x ];then
    ## gen crud
    gen
 
+   ## second#2 step, generator table persistence
+   $CONFCLI crud reset --save
+   $CONFCLI table reset --save
+   $CONFCLI table add $slave_table --save
+
+   $CONFCLI list -T  ## do not need to show the config
+
+   ## gen crud
+   gen
+
+## two slaves 
 elif [ "$cmd"x == "testcrudonemanyx2"x ];then
    master='cg_master_resource'
    slave='cg_master_resource_item:master_id'
    slave2='cg_master_resource_record:other_id'
-   slave_master='cg_master_resource_item'
-   slave2_master='cg_master_resource_record'
+   slave_table_='cg_master_resource_item'
+   slave2_table='cg_master_resource_record'
 
    # config table
    $CONFCLI table reset --save
@@ -1138,6 +1151,17 @@ elif [ "$cmd"x == "testcrudonemanyx2"x ];then
    # config end
 
    $CONFCLI list -t -c
+
+   ## gen crud
+   gen
+
+
+   ## second#2 step, generator table persistence
+   $CONFCLI crud reset --save
+   $CONFCLI table reset --save
+   $CONFCLI table add $slave_table $slave2_table --save
+
+   $CONFCLI list -T  ## do not need to show the config
 
    ## gen crud
    gen
@@ -1169,6 +1193,19 @@ elif [ "$cmd"x == "crudmanymany"x -o "$cmd"x == "testcrudmanymany"x ];then
 
    ## gen crud
    gen
+
+
+   ## second#2 step, generator table persistence
+   if [ "$cmd"x == "testcrudmanymany"x ];then
+      $CONFCLI crud reset --save
+      $CONFCLI table reset --save
+      $CONFCLI table add $master $peer --save
+
+      $CONFCLI list -T  ## do not need to show the config
+
+      ## gen crud
+      gen
+   fi
 
 elif [ "$cmd"x == "crudgroup"x -o "$cmd"x == "crudgroupby"x -o "$cmd"x == "testcrudgroup"x -o "$cmd"x == "testcrudgroupby"x -o  "$cmd"x == "testcrudgroupbyfield"x ];then
 

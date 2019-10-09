@@ -6,8 +6,8 @@ connection:
    username: root
    password: root
 
-module: test
+module: cg
 
 tables:
-  - cg_category_type
-  - cg_category
+  - cg_master_resource
+  - cg_master_resource_item

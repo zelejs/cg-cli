@@ -28,3 +28,8 @@ hs_err_pid*
 .idea/
 target/
 
+# vscode
+assets/.classpath
+assets/.factorypath
+assets/bin/
+assets/.project
