@@ -9,7 +9,7 @@
     <properties>
         <moduleName>cg</moduleName>
         <parentPackage>module</parentPackage>
-        <url>jdbc:mysql://120.79.77.207/test?user=root&amp;password=root&amp;characterEncoding=utf8</url>
+        <url>jdbc:mysql://120.79.49.72/test?user=root&amp;password=root&amp;characterEncoding=utf8</url>
         <init>false</init>
     </properties>
 
