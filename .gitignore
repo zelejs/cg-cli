@@ -2,6 +2,8 @@
 ### Java template
 # Compiled class file
 *.class
+package-lock.json
+node_modules/
 
 # Log file
 *.log
@@ -33,3 +35,4 @@ assets/.classpath
 assets/.factorypath
 assets/bin/
 assets/.project
+assets/.settings/
