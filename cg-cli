@@ -339,7 +339,7 @@ elif [ "$cmd"x == "build"x  ];then
          echo "Usage: cg-cli build init table <table> [...]"
          exit
       fi
-   elif [ "$subcmd"x == "crud"x ]
+   elif [ "$subcmd"x == "crud"x ];then
       arg=$3;
       if [ "$arg"x == "xml"x ];then
           cmd=cmdbuildcrudxml

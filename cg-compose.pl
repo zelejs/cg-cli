@@ -154,7 +154,7 @@ sub inittable {
    #print `cg-cli db show tables`;
 
    ## init tables
-   my $command_line = "cg-cli crud init table ";
+   my $command_line = "cg-cli build init table ";
 
    my @target_tables = @{$YAML->[0]->{tables}};
    foreach(@target_tables){
@@ -179,7 +179,7 @@ sub buildapp{
       push(@argv, '--gen');
    }
 
-   print `cg-cli crud xml @argv`;
+   print `cg-cli build crud xml @argv`;
 }
 
 
