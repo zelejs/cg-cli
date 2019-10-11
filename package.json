@@ -13,6 +13,7 @@
         "cg-compose": "./cg-compose",
         "remote": "./remote",
         "jenkins": "./jenkins",
-        "standalone": "./standalone"
+        "standalone": "./standalone",
+        "swagger-cli": "./swagger-cli"
     }
 }

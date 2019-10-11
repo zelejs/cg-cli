@@ -3,6 +3,7 @@
 # Compiled class file
 *.class
 package-lock.json
+.vscode/
 node_modules/
 
 # Log file
