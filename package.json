@@ -13,7 +13,6 @@
         "cg-compose": "./cg-compose",
         "remote": "./remote",
         "jenkins": "./jenkins",
-        "allin-cli": "./allin-cli",
-	"allin":"./allin-cli"
+        "standalone": "./standalone"
     }
 }
