@@ -24,16 +24,13 @@
         <crud-plus.version>0.0.6</crud-plus.version>
         <crud-log.version>0.0.1</crud-log.version>
         <crud-core.version>0.0.2</crud-core.version>
-        <jwt-core.version>0.0.2</jwt-core.version>
+        <crud-log.version>0.0.2</crud-log.version>
+	    <crud-dev.version>0.0.1</crud-dev.version>
         <swagger.version>2.5.0</swagger.version>
+        <skipStandalone>false</skipStandalone>
     </properties>
 
     <dependencies>
-        <dependency>
-            <groupId>com.jfeat</groupId>
-            <artifactId>crud-log</artifactId>
-            <version>${crud-log.version}</version>
-        </dependency>
         <dependency>
             <groupId>com.jfeat</groupId>
             <artifactId>crud-base</artifactId>
@@ -43,6 +40,12 @@
             <groupId>com.jfeat</groupId>
             <artifactId>crud-plus</artifactId>
             <version>${crud-plus.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.jfeat</groupId>
+                    <artifactId>jwt-core</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>com.jfeat</groupId>
@@ -51,17 +54,29 @@
         </dependency>
         <dependency>
             <groupId>com.jfeat</groupId>
-            <artifactId>jwt-core</artifactId>
-            <version>${jwt-core.version}</version>
+            <artifactId>crud-log</artifactId>
+            <version>${crud-log.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.jfeat</groupId>
+                    <artifactId>jwt-core</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
-
-        <!--spring boot依赖-->
+	    <dependency>
+            <groupId>com.jfeat</groupId>
+            <artifactId>crud-dev</artifactId>
+            <version>${crud-dev.version}</version>
+        </dependency>
+        
+	    <!--springboot test-->
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
         </dependency>
 
-        <!--其他依赖-->
+        <!--swagger-->
         <dependency>
             <groupId>com.alibaba</groupId>
             <artifactId>fastjson</artifactId>
@@ -78,7 +93,7 @@
             <version>${swagger.version}</version>
         </dependency>
 
-<!--        支持java 11-->
+        <!--allow swagger support java 11 (above java9)-->
         <dependency>
             <groupId>javax.xml.bind</groupId>
             <artifactId>jaxb-api</artifactId>
@@ -99,8 +114,7 @@
             <artifactId>activation</artifactId>
             <version>1.1.1</version>
         </dependency>
-
-	<dependency>
+        <dependency>
             <groupId>org.aspectj</groupId>
             <artifactId>aspectjweaver</artifactId>
             <version>1.9.4</version>
@@ -143,8 +157,8 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-		<version>3.6.0</version>
-		<configuration>
+                <version>3.6.0</version>
+                <configuration>
                     <source>11</source>
                     <target>11</target>
                 </configuration>
@@ -167,33 +181,18 @@
                 </executions>
             </plugin>
 
-	    <plugin>
+            <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
                 <version>3.1.2</version>
             </plugin>
+
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-deploy-plugin</artifactId>
             </plugin>
-            <plugin>
-                <groupId>com.jfeat</groupId>
-                <artifactId>sb-code-generator</artifactId>
-                <version>1.2.2</version>
-                <configuration>
-                    <moduleName>testdao</moduleName>
-                    <dbUrl>jdbc:mysql://192.168.2.153:3306/test?characterEncoding=utf-8</dbUrl>
-                    <username>root</username>
-                    <password>root</password>
-                    <parentPackage>com.jfeat.am.module</parentPackage>
-                    <outputDir>src/main/java</outputDir>
-                    <initialize>false</initialize>
-                    <tables>
-                        <table>t_test_timestamp</table>
-                    </tables>
-                </configuration>
-            </plugin>
         </plugins>
+
         <resources>
             <resource>
                 <directory>src/main/webapp</directory>
