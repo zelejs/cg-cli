@@ -644,10 +644,25 @@ dbrunsql(){
    param2=$4
    param3=$5
 
+   ## check sql, move to src/main/resources/sql
+   if [ ! -d  src/main/resources/sql ];then 
+      mkdir -p src/main/resources/sql
+   fi
+
+   ## mv current dir sql to src/main/resources/sql
+   for cursql in $(ls *.sql);do
+      mv $cursql src/main/resources/sql
+   done
+
    if [ ! "$schemasql" ];then
        ## run all sql files
       for sql in $(ls src/main/resources/sql/*.sql);do
          echo $sql
+
+         ## remove all comment lines first
+         perl -i -ne "if(/^--/ || /^\#/){next;}print;" $sql
+         rm "$sql.bak"
+
          $dir/mysql-test/bin/mysql-test $url $sql
       done
       return
@@ -938,25 +953,33 @@ codingsql() {
     buildcrudxml $cruds
 }
 
+
 gen() {
    if [ $op_gen ];then
       echo "mvn com.jfeat:sb-code-generator:1.3.4:generate -f $pom"
       mvn com.jfeat:sb-code-generator:1.3.4:generate -f $pom
+
+      ## prepare AmApplication.java
       if [ ! -e src/main/java/com/jfeat/AmApplication.java ];then
          if [ ! -d src/main/java/com/jfeat ];then
              mkdir -p src/main/java/com/jfeat
          fi
          cp $dir/assets/src/main/java/com/jfeat/AmApplication.java src/main/java/com/jfeat
       fi
+
+      ## prepare pom.xml
       if [ ! -e pom.xml ];then
          cp $dir/assets/pom.xml ./
       fi
+
+      ## prepare application.yml
       if [ ! -e src/main/resources/application.yml ];then
          if [ ! -d src/main/resources ];then
              mkdir -p src/main/resources
          fi
          cp $dir/assets/src/main/resources/application.yml src/main/resources/application.yml
       fi
+      
       cp $dir/assets/.gitignore ./
       cp $dir/assets/README.md ./
    fi
