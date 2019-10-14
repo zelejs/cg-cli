@@ -22,7 +22,7 @@
         <skipStandalone>false</skipStandalone>
         <crud-base.version>0.0.1</crud-base.version>
         <crud-plus.version>0.0.6</crud-plus.version>
-        <crud-log.version>0.0.1</crud-log.version>
+        <crud-log.version>0.0.2</crud-log.version>
         <crud-core.version>0.0.2</crud-core.version>
         <crud-log.version>0.0.2</crud-log.version>
 	    <crud-dev.version>0.0.1</crud-dev.version>
