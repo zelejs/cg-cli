@@ -981,7 +981,7 @@ gen() {
       fi
       
       cp $dir/assets/.gitignore ./
-      cp $dir/assets/README.md ./
+      #cp $dir/assets/README.md ./
    fi
 }
 
@@ -1069,12 +1069,8 @@ elif [ "$cmd"x == "crudreset"x ];then
    $CONFCLI table reset --save
    $CONFCLI crud reset --save
 
-elif [ "$cmd"x == "crudone"x -o "$cmd"x == "testcrudone"x ];then
+elif [ "$cmd"x == "crudone"x ];then
    master=$3
-
-   if [ "$cmd"x == "testcrudone"x ];then
-      master='cg_master_resource'
-   fi
 
    shift; ## shift crud
    shift; ## shift one
@@ -1101,26 +1097,51 @@ elif [ "$cmd"x == "crudone"x -o "$cmd"x == "testcrudone"x ];then
 
    # config table
    $CONFCLI table reset --save
-   if [ "$cmd"x == "testcrudone"x ];then
+
+   if [ $op_gen ];then
       $CONFCLI crud reset --save
    fi
 
    ## for crudone
-   if [ "$cmd"x == "crudone"x ];then 
-      for m in $@;do
-         if [[ $m == --* ]];then
-            continue
-         fi
-         $CONFCLI crud add one $m --save
-      done
-   else
-      ## testcrudone
-      $CONFCLI crud add one $master --save
-   fi
+   for m in $@;do
+      if [[ $m == --* ]];then
+         continue
+      fi
+      $CONFCLI crud add one $m --save
+   done
    
    $CONFCLI list -t -c
+
    ## gen crud
    gen
+
+   ## do not need to gen table
+
+
+elif [ "$cmd"x == "testcrudone"x ];then
+   master='cg_master_resource'
+
+   shift; ## shift crud
+   shift; ## shift one
+
+   # config table
+   $CONFCLI table reset --save
+   $CONFCLI crud reset --save
+
+   ## for crudone
+   for m in $@;do
+      if [[ $m == --* ]];then
+         continue
+      fi
+      $CONFCLI crud add one $m --save
+   done
+   
+   $CONFCLI list -t -c
+
+   ## gen crud
+   gen
+
+   ## do not need to gen tables
 
 
 elif [ "$cmd"x == "crudonemany"x ];then
@@ -1136,19 +1157,23 @@ elif [ "$cmd"x == "crudonemany"x ];then
    $CONFCLI table reset --save
    # $CONFCLI table add $master $@ --save
 
-   # config crud
-   #$CONFCLI crud reset --save
+   # just reset crud for subsequent gen operation 
+   if [ $op_gen ];then
+      $CONFCLI crud reset --save
+   fi
+   ## save config for gen
    $CONFCLI crud add onemany $master $@ --save
-   # config end
 
    $CONFCLI list -t -c
+
    ## gen crud
    gen
 
-   ## second#2 step, generator all slaves && children
+   ## second#2 step, generator tables
    if [ $op_gen ];then
 
       $CONFCLI crud reset --save
+      $CONFCLI table reset --save
       $CONFCLI table add $@ --save
 
       $CONFCLI list -T  ## do not need to show the config
@@ -1217,24 +1242,50 @@ elif [ "$cmd"x == "testcrudonemanyx2"x ];then
 
    ## gen crud
    gen
-    
-elif [ "$cmd"x == "crudmanymany"x -o "$cmd"x == "testcrudmanymany"x ];then
-   master=$3; 
-   peer=$4; 
-   relation=$5
 
-   if [ "$cmd"x == "testcrudmanymany"x ];then
-       master='cg_master_resource'
-       peer='cg_master_resource_peer'
-       relation='cg_master_resource_relation'
-   fi
+
+elif [ "$cmd"x == "testcrudmanymany"x ];then
+   master='cg_master_resource'
+   peer='cg_master_resource_peer'
+   relation='cg_master_resource_relation'
 
    # config table
    $CONFCLI table reset --save
    #$CONFCLI table add $master $peer $relation --save
 
    # config crud
-   if [ "$cmd"x == "testcrudmanymany"x ];then
+   $CONFCLI crud reset --save
+   $CONFCLI crud add manymany $master $peer $relation --save
+   # config end
+   
+   # show the result [-t - show tables] and  [-c - show cruds]
+   $CONFCLI list -t -c
+
+   ## gen crud
+   gen
+
+   ## second#2 step, generator table persistence
+   $CONFCLI crud reset --save
+   $CONFCLI table reset --save
+   $CONFCLI table add $master $peer --save
+
+   $CONFCLI list -T  ## do not need to show the config
+
+   ## gen crud
+   gen
+
+    
+elif [ "$cmd"x == "crudmanymany"x ];then
+   master=$3; 
+   peer=$4; 
+   relation=$5
+
+   # config table
+   $CONFCLI table reset --save
+   #$CONFCLI table add $master $peer $relation --save
+
+   # config crud
+   if [ $op_gen ];then
       $CONFCLI crud reset --save
    fi
    $CONFCLI crud add manymany $master $peer $relation --save
@@ -1246,9 +1297,8 @@ elif [ "$cmd"x == "crudmanymany"x -o "$cmd"x == "testcrudmanymany"x ];then
    ## gen crud
    gen
 
-
-   ## second#2 step, generator table persistence
-   if [ "$cmd"x == "testcrudmanymany"x ];then
+   if [ $op_gen ];then
+      ## second#2 step, generator table persistence
       $CONFCLI crud reset --save
       $CONFCLI table reset --save
       $CONFCLI table add $master $peer --save
