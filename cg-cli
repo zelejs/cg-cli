@@ -11,7 +11,8 @@ usage() {
   echo ''
   echo " OPTIONS:"
   echo "    cg-cli module get"
-  echo "    cg-cli module set <module-name> [parent-module]"
+  #echo "    cg-cli module set <module-name> [parent-module]"
+  echo "    cg-cli module set <module-name>"
   echo "    cg-cli db get url"
   echo "    cg-cli db set url <database> [localhost] [3306] [root] [root]"
   echo "    cg-cli db sanity [url]"
@@ -80,8 +81,8 @@ usage_test() {
 
 ## start
 cmd=$1
-op_gen=$9    ## null 
-op_module=$9 ## null
+op_gen=$7    ## null 
+op_module=$8 ## null
 cg_module=$9
 if [ ! $cmd ];then
    usage
@@ -101,23 +102,28 @@ for p in $@;do
    ## get module
    if [ "$p"x == "--module"x -o "$p"x == "--mod"x -o "$p"x == "-m"x  ];then
       op_module='--module'
+   else
+      if [ $op_module -a ! $cg_module ];then
+         cg_module=$p
+      fi
    fi
-   if [ $op_module ];then
-      cg_module = $p
-   fi
+
+   ## next option
 done
 
+## skip to cmd area
 ## set module via --module runtime parameter
-if [ $op_module ];then 
-   moduleset $cg_module
-fi
+#if [ $op_module ];then 
+#   moduleset $cg_module
+#fi
 
 if [ "$cmd"x == "module"x ];then
    subcmd=$2
 
    if [ ! $subcmd ];then
       echo "    cg-cli module get"
-      echo "    cg-cli module set <module-name> [parent-module]"
+      #echo "    cg-cli module set <module-name> [parent-module]"
+      echo "    cg-cli module set <module-name>"
       exit
    fi
 
@@ -126,7 +132,8 @@ if [ "$cmd"x == "module"x ];then
 
    elif [ "$subcmd"x == "set"x  ];then
       if [[ ! $3 ]];then
-          echo "    cg-cli module set <module-name> [parent-module]"
+          #echo "    cg-cli module set <module-name> [parent-module]"
+          echo "    cg-cli module set <module-name>"
           exit
       fi
       cmd=cmdmoduleset
@@ -564,7 +571,7 @@ match_database(){
 
 moduleget(){
    grep moduleName gen/$POM | grep -v '\$'
-   grep parentPackage gen/$POM | grep -v '\$'
+   #grep parentPackage gen/$POM | grep -v '\$'
 }
 
 moduleset() {
@@ -572,9 +579,12 @@ moduleset() {
        cp $dir/assets/$POM gen/$POM
     fi
 
+   ## if op=set
+   op=$2
+
    #<moduleName>cg</moduleName>
    module_name=$1    ## cg
-   parent_module=$2  ## module
+   #parent_module=$2  ## module
 
    if [ ! $parent_module ];then
        parent_module=module
@@ -584,17 +594,19 @@ moduleset() {
 
    if [ "$uname"x == "Darwin"x ];then
       sed -i "" "s/<moduleName>[a-zA-Z]*<\/moduleName>/<moduleName>$module_name<\/moduleName>/" $pom
-      if [ $parent_module ];then
-           sed -i "" "s/<parentPackage>[a-zA-Z]*<\/parentPackage>/<parentPackage>$parent_module<\/parentPackage>/" $pom
-      fi
+      #if [ $parent_module ];then
+      #     sed -i "" "s/<parentPackage>[a-zA-Z]*<\/parentPackage>/<parentPackage>$parent_module<\/parentPackage>/" $pom
+      #fi
    else
       sed -i  "s/<moduleName>[a-zA-Z]\+<\/moduleName>/<moduleName>$module_name<\/moduleName>/" $pom
-      if [ $parent_module ];then
-           sed -i  "s/<parentPackage>[a-zA-Z]\+<\/parentPackage>/<parentPackage>$parent_module<\/parentPackage>/" $pom
-      fi
+      #if [ $parent_module ];then
+      #     sed -i  "s/<parentPackage>[a-zA-Z]\+<\/parentPackage>/<parentPackage>$parent_module<\/parentPackage>/" $pom
+      #fi
    fi
 
-   moduleget
+   if [ $op ];then
+      moduleget
+   fi
 }
 
 dbgeturl(){
@@ -1025,6 +1037,11 @@ genurl(){
 
 ### main ##
 
+## set module via --module runtime parameter
+if [ $op_module ];then 
+   moduleset $cg_module
+fi
+
 ## check test init first
 if [[ $cmd == test* ]];then
     testinit
@@ -1035,7 +1052,8 @@ if [ "$cmd"x == "cmdmoduleget"x ];then
    moduleget
 
 elif [ "$cmd"x == "cmdmoduleset"x ];then
-   moduleset $3 $4 $5
+   ## 'set' notify for module set
+   moduleset $cg_module 'set'
 
 elif [ "$cmd"x == "dbgeturl"x ];then
    dbgeturl $@
