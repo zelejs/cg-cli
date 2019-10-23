@@ -2,15 +2,20 @@
 
 ## Install
 
-```java
+```shell
 $ git clone https://github.com/kequandian/cg-cli
 $ npm i -g
 ```
 
 ## Usage
-```java
-    Usage:
-    cg-cli <OPTIONS> [-h|--help] [--gen]
+```shell
+Usage:
+    cg-cli <OPTIONS> [-h|--help] [--gen] [--module] <module>
+eg. cg-cli crud one t_device --gen --module device
+
+PARAMETERS:
+    --gen      parameter for generating the code effectively
+    --module   parameter for setting the module name at runtime
 
  OPTIONS:
     cg-cli module get
@@ -37,4 +42,3 @@ $ npm i -g
     cg-cli build init table <table-name> [...]
     cg-cli build crud xml [/path/to/cruds.xml]
 ```
-
