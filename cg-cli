@@ -2,7 +2,12 @@
 ## CONFCLI="perl -I$dir/local $dir/local/conf-cli"
 usage() {
   echo "Usage:"
-  echo "    cg-cli <OPTIONS> [-h|--help] [--gen]"
+  echo '    cg-cli <OPTIONS> [-h|--help] [--gen] [--module] <module>'
+  echo 'eg. cg-cli crud one t_device --gen --module device'
+  echo ''
+  echo 'PARAMETERS:'
+  echo '    --gen      parameter for generating the code effectively'
+  echo '    --module   parameter for setting the module name at runtime'
   echo ''
   echo " OPTIONS:"
   echo "    cg-cli module get"
@@ -75,7 +80,9 @@ usage_test() {
 
 ## start
 cmd=$1
-op_gen=$9  ## null 
+op_gen=$9    ## null 
+op_module=$9 ## null
+cg_module=$9
 if [ ! $cmd ];then
    usage
    exit
@@ -86,12 +93,24 @@ for p in $@;do
       exit
    fi
 
-   ## get check
+   ## get gen option
    if [ "$p"x == "--gen"x ];then
       op_gen='--gen'
    fi
+
+   ## get module
+   if [ "$p"x == "--module"x -o "$p"x == "--mod"x -o "$p"x == "-m"x  ];then
+      op_module='--module'
+   fi
+   if [ $op_module ];then
+      cg_module = $p
+   fi
 done
 
+## set module via --module runtime parameter
+if [ $op_module ];then 
+   moduleset $cg_module
+fi
 
 if [ "$cmd"x == "module"x ];then
    subcmd=$2
@@ -103,14 +122,14 @@ if [ "$cmd"x == "module"x ];then
    fi
 
    if [ "$subcmd"x == "get"x  ];then
-      cmd=moduleget
+      cmd=cmdmoduleget
 
    elif [ "$subcmd"x == "set"x  ];then
       if [[ ! $3 ]];then
           echo "    cg-cli module set <module-name> [parent-module]"
           exit
       fi
-      cmd=moduleset
+      cmd=cmdmoduleset
    fi
 
 elif [ "$cmd"x == "db"x  ];then
@@ -554,8 +573,8 @@ moduleset() {
     fi
 
    #<moduleName>cg</moduleName>
-   module_name=$3    ## cg
-   parent_module=$4  ## module
+   module_name=$1    ## cg
+   parent_module=$2  ## module
 
    if [ ! $parent_module ];then
        parent_module=module
@@ -1012,11 +1031,11 @@ if [[ $cmd == test* ]];then
 fi
 
 ## check cmd and exec
-if [ "$cmd"x == "moduleget"x ];then
+if [ "$cmd"x == "cmdmoduleget"x ];then
    moduleget
 
-elif [ "$cmd"x == "moduleset"x ];then
-   moduleset $@
+elif [ "$cmd"x == "cmdmoduleset"x ];then
+   moduleset $3 $4 $5
 
 elif [ "$cmd"x == "dbgeturl"x ];then
    dbgeturl $@
