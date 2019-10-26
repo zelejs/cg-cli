@@ -30,6 +30,7 @@ hs_err_pid*
 # others
 .idea/
 target/
+gen/
 
 # vscode
 assets/.classpath

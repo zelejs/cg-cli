@@ -1135,22 +1135,27 @@ elif [ "$cmd"x == "crudone"x ];then
    # config table
    $CONFCLI table reset --save
 
-   if [ $op_gen ];then
-      $CONFCLI crud reset --save
-   fi
-
    ## for crudone
    for m in $@;do
       if [[ $m == --* ]];then
          continue
       fi
+
+      ## reset 
+      if [ $op_gen ];then
+         $CONFCLI crud reset --save
+      fi
+
       $CONFCLI crud add one $m --save
+
+      ## gen for each time
+      gen
    done
    
    $CONFCLI list -t -c
 
    ## gen crud
-   gen
+   #gen
 
    ## do not need to gen table
 
