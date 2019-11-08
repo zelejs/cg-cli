@@ -2,20 +2,20 @@
 ## CONFCLI="perl -I$dir/local $dir/local/conf-cli"
 usage() {
   echo "Usage:"
-  echo '    cg-cli <OPTIONS> [-h|--help] [--gen] [--module] <module>'
+  echo '    cg-cli <OPTIONS> [-h|--help] [--gen] [--module <module>]'
   echo 'eg. cg-cli crud one t_device --gen --module device'
   echo ''
   echo 'PARAMETERS:'
   echo '    --gen      parameter for generating the code effectively'
-  echo '    --module   parameter for setting the module name at runtime'
+  echo '    --module   mandatory parameter with --gen for setting the module name at runtime'
   echo ''
   echo " OPTIONS:"
-  echo "    cg-cli module get"
+  #echo "    cg-cli module get"
   #echo "    cg-cli module set <module-name> [parent-module]"
-  echo "    cg-cli module set <module-name>"
+  #echo "    cg-cli module set <module-name>"
+  echo "    cg-cli db sanity [url]"
   echo "    cg-cli db get url"
   echo "    cg-cli db set url <database> [localhost] [3306] [root] [root]"
-  echo "    cg-cli db sanity [url]"
   echo "    cg-cli db run sql [/path/to/schema.sql] [param] ..."
   echo "    cg-cli db show tables"
   echo "    cg-cli db show create table <table-name>"
@@ -110,6 +110,13 @@ for p in $@;do
 
    ## next option
 done
+
+## if --gen together with --module
+if [ $op_gen -a ! $cg_module ];then
+    echo '--module must be provied with --gen option.'
+    exit
+fi
+
 
 ## skip to cmd area
 ## set module via --module runtime parameter
@@ -680,13 +687,13 @@ dbrunsql(){
       mkdir -p src/main/resources/sql
    fi
 
-   ## mv current dir sql to src/main/resources/sql
-   for cursql in $(ls *.sql);do
-      mv $cursql src/main/resources/sql
-   done
-
    if [ ! "$schemasql" ];then
-       ## run all sql files
+      ## mv current dir sql to src/main/resources/sql
+      for cursql in $(ls *.sql);do
+         mv $cursql src/main/resources/sql
+      done
+
+      ## run all sql files
       for sql in $(ls src/main/resources/sql/*.sql);do
          echo $sql
 
