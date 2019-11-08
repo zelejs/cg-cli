@@ -19,7 +19,7 @@ PARAMETERS:
 
  OPTIONS:
     cg-cli module get
-    cg-cli module set <module-name> [parent-module]
+    cg-cli module set <module-name>
     cg-cli db get url
     cg-cli db set url <database> [localhost] [3306] [root] [root]
     cg-cli db sanity [url]
