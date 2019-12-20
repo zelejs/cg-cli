@@ -2,11 +2,6 @@
 ### Java template
 # Compiled class file
 *.class
-package-lock.json
-.vscode/
-node_modules/
-/cruds.xml
-/gen/
 
 # Log file
 *.log
@@ -29,14 +24,18 @@ node_modules/
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
 
+# project
+assets/.classpath
+assets/.factorypath
+assets/.project
+assets/.settings/
+
 # others
 .idea/
 target/
-gen/
-
-# vscode
-assets/.classpath
-assets/.factorypath
-assets/bin/
-assets/.project
-assets/.settings/
+demo/
+node_modules/
+/gen/
+/src/
+/pom.xml
+/cruds.xml
