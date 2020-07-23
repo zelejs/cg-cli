@@ -10,10 +10,7 @@
     },
     "bin": {
         "cg-cli": "./cg-cli",
-        "cg-compose": "./cg-compose",
-        "remote": "./remote",
-        "jenkins": "./jenkins",
-        "standalone": "./standalone",
+	"cg-compose": "./cg-compose",
         "swagger-cli": "./swagger-cli"
     }
 }
