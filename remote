@@ -86,6 +86,7 @@ if($cmd eq "xfr"){
 
 }elsif($cmd eq 'mirror' || $cmd eq 'mirrorback'){
    chdir $dir;  ## <target>
+   my $target=$dir;
    my $mirror_repo = $param;
 
    ## if define .mirror config
@@ -93,24 +94,38 @@ if($cmd eq "xfr"){
       if(-f ".mirror"){
          $mirror_repo= `cat .mirror`;
          $mirror_repo=~s/[\r\n\t\s]+$//; 
-      }
-   }
-   ## no mirror repo provided, use default mirror repo by target dir
-   if(!($mirror_repo)){
-      my $local_repo = get_local_repo();
-      $local_repo =~ /\/([\w\.\-_]+)$/;
+      }else{
+         ## no mirror param and no .mirror file, 
+         ## pleas provide mirror repo
+   
+         ## no mirror repo provided, use default mirror repo by target dir
+         my $local_repo = get_local_repo();
+         $local_repo =~ /\/([\w\.\-_]+)$/;
 
-      $mirror_repo="devops\@zele.pro:/home/devops/mirror/$1";
-      print "mirror: $mirror_repo\n";
+         $mirror_repo="devops\@zele.pro:/home/devops/mirror/$1";
+         #print "mirror: $mirror_repo\n";
+
+         print "Usage: remote mirror $target $mirror_repo\n";
+      }
+   }elsif(!(-f '.mirror')){
+      ## if mirror_repo and no .mirror save it
+      open my $fh, ">", ".mirror";
+        print $fh $mirror_repo;
+      close $fh;
    }
+
+
    if(!($mirror_repo)){
       print "Usage: remote mirror <target> <mirror-repo>\n";
       exit(0);
    }
 
    my $local_repo = get_local_repo();
+   print "## #################\n";
    print '## '.$local_repo." ##\n";
-   
+   print '## + '.$mirror_repo." ##\n";
+   print "## #################\n\n";
+
    ## mirror
    if($cmd eq 'mirror'){
       print "git remote set-url origin $mirror_repo\n";
@@ -130,7 +145,9 @@ if($cmd eq "xfr"){
    }
 
    print "\n";
+   print "## ############### ##\n";
    print '## '.get_local_repo()." ##\n";
+   print "## ############### ##\n";
 
 }elsif($cmd eq 'mv'){
    chdir $dir;
