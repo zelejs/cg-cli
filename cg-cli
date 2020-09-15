@@ -32,6 +32,7 @@ usage() {
   echo "    cg-cli test crud one"
   echo "    cg-cli test crud onemany"
   echo "    cg-cli test crud onemany x2"
+  echo "    cg-cli test crud onemany peer"
   #echo "    cg-cli test crud manymany"
   echo "    cg-cli test crud group"
   echo "    cg-cli test crud groupby"
@@ -77,7 +78,8 @@ usage_test() {
   echo "    cg-cli test crud one"
   echo "    cg-cli test crud onemany"
   echo "    cg-cli test crud onemany x2"
-  echo "    cg-cli test crud manymany"
+  echo "    cg-cli test crud onemany peer"
+  #echo "    cg-cli test crud manymany"
   echo "    cg-cli test crud group"
   echo "    cg-cli test crud groupby"
   echo "    cg-cli test crud groupby field"
@@ -273,17 +275,19 @@ elif [ "$cmd"x == "crud"x ];then
 
       cmd=crudonemany
 
-   elif [ "$subcmd"x == "manymany"x ];then
-       # $3-master; $4-peer, $5-relation
+   #    cmd=crudmanymany
+   
+   # elif [ "$subcmd"x == "manymany"x ];then
+   #     # $3-master; $4-peer, $5-relation
 
-      ## check usage
-      if [ ! $5 ];then
-         usage_crud
-         exit
-      fi 
-      ## end
+   #    ## check usage
+   #    if [ ! $5 ];then
+   #       usage_crud
+   #       exit
+   #    fi 
+   #    ## end
 
-      cmd=crudmanymany
+   #    cmd=crudmanymany
    
    elif [ "$subcmd"x == "group"x ];then
        # $3-group; $4-group
@@ -353,6 +357,8 @@ elif [ "$cmd"x == "test"x ];then
             cmd=testcrudonemany
             if [ "$4"x == "x2"x ];then
                cmd=testcrudonemanyx2
+            elif [ "$4"x == "peer"x ];then
+               cmd=testcrudonemanypeer
             fi
        elif [ "$3"x == "manymany"x ];then
            cmd=testcrudmanymany
@@ -1277,7 +1283,7 @@ elif [ "$cmd"x == "testcrudonemanyx2"x ];then
    master='cg_master_resource'
    slave='cg_master_resource_item:master_id'
    slave2='cg_master_resource_record:other_id'
-   slave_table_='cg_master_resource_item'
+   slave_table='cg_master_resource_item'
    slave2_table='cg_master_resource_record'
 
    # config table
@@ -1305,6 +1311,36 @@ elif [ "$cmd"x == "testcrudonemanyx2"x ];then
    ## gen crud
    gen
 
+
+elif [ "$cmd"x == "testcrudonemanypeer"x ];then
+   master='cg_master_resource'
+   slave='cg_master_resource_item:cg_master_resource_relation::master_id:id'
+   slave_table='cg_master_resource_item'
+
+   # config table
+   $CONFCLI table reset --save
+   #$CONFCLI table add $master $slave $slave2 --save
+
+   # config crud
+   $CONFCLI crud reset --save
+   $CONFCLI crud add onemany $master $slave --save
+   # config end
+
+   $CONFCLI list -t -c
+
+   ## gen crud
+   gen
+
+
+   ## second#2 step, generator table persistence
+   $CONFCLI crud reset --save
+   $CONFCLI table reset --save
+   $CONFCLI table add $slave_table --save
+
+   $CONFCLI list -T  ## do not need to show the config
+
+   ## gen crud
+   gen
 
 elif [ "$cmd"x == "testcrudmanymany"x ];then
    master='cg_master_resource'
