@@ -6,7 +6,7 @@
     "author": "kqd",
     "dependencies": {
         "commander": "^2.16.0",
-        "handlebars": "^4.0.11"
+        "handlebars": "^4.7.7"
     },
     "bin": {
         "cg-cli": "./cg-cli",
